@@ -1,0 +1,56 @@
+/* Add these specific styles to your existing CSS file */
+
+.document-main-title {
+  font-size: 22px;
+  letter-spacing: 4px;
+  margin: 0;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.company-info {
+  font-size: 12px;
+  margin: 2px 0;
+  color: #333;
+}
+
+.company-info-small {
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+/* Metadata underline effect to match manual entry style */
+.receipt-metadata p {
+  margin: 8px 0;
+}
+
+.receipt-metadata strong {
+  color: #000;
+  margin-right: 5px;
+}
+
+/* Table refinements */
+.receipt-table th {
+  background-color: transparent;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* Shadow for the "Paper" in the modal */
+.invoice-paper {
+  border: 1px solid #ddd;
+}
+
+/* Print Cleanup */
+@media print {
+  .invoice-modal-overlay {
+    background: none !important;
+    padding: 0 !important;
+  }
+  .invoice-paper {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
