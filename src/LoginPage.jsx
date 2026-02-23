@@ -15,21 +15,43 @@ function LoginPage() {
     setPasswordVisible(!passwordVisible);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // Validation Logic
-    // We check for "admin", but we save the "name" to storage for the Dashboard
-    if (name.toLowerCase() === "admin" && password === "1234") {
-      
-      // --- FIX: SAVE USERNAME BEFORE NAVIGATING ---
-      // We capitalize the first letter so it looks nice on the dashboard
-      const displayName = name.charAt(0).toUpperCase() + name.slice(1);
-      localStorage.setItem('currentUser', displayName); 
-      
-      navigate('/dashboard');
-    } else {
-      setShowError(true); 
+
+    try {
+      // 1. Send Username/Password to Backend
+      // Notice we are sending keys 'username' and 'password' to match Python
+      const response = await fetch('http://127.0.0.1:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: name,
+          password: password 
+        }) 
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // 2. Login Success!
+        
+        // Save the Role and Username to the browser
+        localStorage.setItem('currentUser', data.username);
+        localStorage.setItem('currentRole', data.role);
+
+        if (data.role === 'Admin') {
+            navigate('/dashboard');
+        } else {
+            navigate('/transact');
+        }
+
+      } else {
+        setShowError(true);
+      }
+
+    } catch (error) {
+      console.error("Login Error:", error);
+      alert("System Error: Check backend console");
     }
   };
 

@@ -9,12 +9,8 @@ const Inventory = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // --- STATE MANAGEMENT ---
-  const [products, setProducts] = useState([
-    { id: 'ERG-001', name: 'Hammer (16oz)', category: 'Hand Tools', qty: 25, unit: 'pcs', retail: 180, selling: 180 },
-    { id: 'ERG-002', name: 'Screwdriver Set (6 pcs)', category: 'Hand Tools', qty: 15, unit: 'set', retail: 350, selling: 320 },
-    { id: 'ERG-003', name: 'Paint Brush (2")', category: 'Hand Tools', qty: 25, unit: 'pcs', retail: 75, selling: 75 },
-  ]);
-
+  const [products, setProducts] = useState([]);
+  
   // Modal Toggles
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -30,9 +26,23 @@ const Inventory = () => {
 
   // --- LOGIC HANDLERS ---
   useEffect(() => {
+    fetchInventory();
+    
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+
+    
   }, []);
+
+    const fetchInventory = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/inventory');
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   const handleCloseAttempt = () => {
     if (formData.name !== "") setShowDiscardModal(true);
@@ -50,17 +60,48 @@ const Inventory = () => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    setProducts(products.filter(item => item.id !== selectedId));
+  const confirmDelete = async () => {
+  if (!selectedId) return;
+
+  try {
+    await fetch(`http://127.0.0.1:5000/api/inventory/${selectedId}`, {
+      method: 'DELETE',
+    });
+
+    fetchInventory();
     setShowDeleteModal(false);
+  } catch (error) {
+    console.error("Error deleting:", error);
+  }
+};
+
+  const handleSave = async (e) => {
+  e.preventDefault();
+  
+  const newProduct = { 
+    ...formData, 
+    selling: formData.retail // or however you calculate selling price
   };
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    const newProduct = { ...formData, selling: formData.retail };
-    setProducts([...products, newProduct]);
-    setShowAddModal(false);
-  };
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/Inventory_Log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProduct)
+    });
+
+    if (response.ok) {
+      fetchInventory(); // <--- Refresh the list from the database
+      setShowAddModal(false);
+      // Reset form
+      setFormData({ id: 'ERG-005', name: '', category: 'Materials', qty: 0, unit: '', retail: 0 });
+    } else {
+      alert("Failed to save product");
+    }
+  } catch (error) {
+    console.error("Error saving:", error);
+  }
+};
 
   // Function to trigger the Batch Modal
   const handleViewBatch = (product) => {
