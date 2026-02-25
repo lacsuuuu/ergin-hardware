@@ -23,7 +23,7 @@ const SalesRecord = () => {
   // API Calls
   const fetchSalesRecords = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/sales-record');
+      const response = await fetch('https://ergin-hardware.onrender.com/api/sales-record');
       if (response.ok) {
         const data = await response.json();
         setSales(data);
@@ -33,7 +33,7 @@ const SalesRecord = () => {
 
   const handleViewReceipt = async (salesId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/sales/${salesId}`);
+      const response = await fetch(`https://ergin-hardware.onrender.com/api/sales/${salesId}`);
       if (response.ok) {
         const data = await response.json();
         

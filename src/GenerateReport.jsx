@@ -31,7 +31,7 @@ const GenerateReport = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
+      const response = await fetch(`https://ergin-hardware.onrender.com/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         setReportData(data);

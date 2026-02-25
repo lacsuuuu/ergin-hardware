@@ -21,7 +21,7 @@ function LoginPage() {
     try {
       // 1. Send Username/Password to Backend
       // Notice we are sending keys 'username' and 'password' to match Python
-      const response = await fetch('http://127.0.0.1:5000/api/login', {
+      const response = await fetch('https://ergin-hardware.onrender.com/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

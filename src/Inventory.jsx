@@ -31,7 +31,7 @@ const Inventory = () => {
   // --- API CALLS ---
   const fetchInventory = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/inventory');
+      const response = await fetch('https://ergin-hardware.onrender.com/api/inventory');
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -43,7 +43,7 @@ const Inventory = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/product', {
+      const response = await fetch('https://ergin-hardware.onrender.com/api/product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

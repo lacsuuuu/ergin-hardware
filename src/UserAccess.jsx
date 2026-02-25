@@ -29,7 +29,7 @@ const UserAccess = () => {
   // API Calls
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/employees');
+      const response = await fetch('https://ergin-hardware.onrender.com/api/employees');
       if (response.ok) {
         const data = await response.json();
         setEmployees(data);
@@ -40,7 +40,7 @@ const UserAccess = () => {
   const handleSaveUser = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/employees', {
+      const response = await fetch('https://ergin-hardware.onrender.com/api/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
