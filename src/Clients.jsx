@@ -9,40 +9,56 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // --- MODAL & ACTION STATES ---
-  const [openMenuId, setOpenMenuId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
-  const [isViewMode, setIsViewMode] = useState(false); // New state to handle Read-Only view
 
   // --- DATA STATE ---
-  const [clients, setClients] = useState([
-    {
-      id: 'CLT-001',
-      name: 'Daniel Reyes',
-      address: '24 San Juan St., Brgy. Villamonte, Bacolod City',
-      email: 'DanielReyes@email.com',
-      terms: '7 days',
-      businessStyle: 'Personal / Individual',
-      tin: '345-221-900-000',
-      status: 'Active'
-    }
-  ]);
-
+  const [clients, setClients] = useState([]);
+  
+  // Matches the 'customer' table columns
   const [formData, setFormData] = useState({
-    name: '', address: '', terms: '', businessStyle: '', tin: ''
+    name: '', address: '', contact: '', email: '', business_style: '', tin: ''
   });
 
   // --- EFFECTS ---
   useEffect(() => {
+    fetchClients();
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    const handleClickOutside = () => setOpenMenuId(null);
-    window.addEventListener('click', handleClickOutside);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('click', handleClickOutside);
-    };
+    return () => clearInterval(timer);
   }, []);
+
+  // --- API CALLS ---
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/clients');
+      const data = await response.json();
+      setClients(data);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
+
+  const handleSaveClient = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        triggerToast("New client added successfully!");
+        fetchClients(); 
+        closeFormCompletely();
+      } else {
+        alert("Failed to save client. Check Flask terminal.");
+      }
+    } catch (error) {
+      console.error("Error saving client:", error);
+    }
+  };
 
   // --- HELPERS ---
   const triggerToast = (message, type = 'success') => {
@@ -51,10 +67,6 @@ const Clients = () => {
   };
 
   const handleCancelAttempt = () => {
-    if (isViewMode) {
-        closeFormCompletely();
-        return;
-    }
     const hasData = Object.values(formData).some(val => val !== '');
     if (hasData) setShowDiscardModal(true);
     else closeFormCompletely();
@@ -63,42 +75,13 @@ const Clients = () => {
   const closeFormCompletely = () => {
     setShowModal(false);
     setShowDiscardModal(false);
-    setIsViewMode(false);
-    setFormData({ name: '', address: '', terms: '', businessStyle: '', tin: '' });
+    setFormData({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   };
 
-  // --- OPERATIONS ---
-  const handleAddClient = (e) => {
-    e.preventDefault();
-    const newClient = { 
-      id: `CLT-00${clients.length + 1}`, 
-      ...formData, 
-      email: 'newclient@email.com', // Placeholder
-      status: 'Active' 
-    };
-    setClients([...clients, newClient]);
-    triggerToast("New client added successfully!");
-    closeFormCompletely();
-  };
-
-  const handleView = (client) => {
-    setFormData({ 
-      name: client.name, 
-      address: client.address, 
-      terms: client.terms, 
-      businessStyle: client.businessStyle, 
-      tin: client.tin 
-    });
-    setIsViewMode(true);
-    setShowModal(true);
-    setOpenMenuId(null);
-  };
-
-  const handleArchive = (id) => {
-    setClients(clients.map(c => c.id === id ? { ...c, status: 'Inactive' } : c));
-    setOpenMenuId(null);
-    triggerToast("Client archived successfully!");
-  };
+  const filteredClients = clients.filter(c =>
+    (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="outer-margin-container">
@@ -106,7 +89,7 @@ const Clients = () => {
 
       <div className="connected-border-box">
         <aside className="sidebar">
-          <div className="logo-section"><img src={logo} alt="Ergin Hardware" className="sidebar-logo" /></div>
+          <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
             <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
             <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
@@ -122,109 +105,102 @@ const Clients = () => {
 
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2>Client Management</h2></div>
+            <div className="title-area"><h2><span className="icon">🤝</span> Client Management</h2></div>
             <div className="admin-info">
-              <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
+              <p className="real-time-date">Date: {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
               <p className="welcome-text">Welcome, Admin</p>
             </div>
           </header>
 
           <hr className="divider" />
 
-          <div className="client-controls">
+          <div className="supplier-controls">
             <div className="search-wrapper">
-              <input type="text" placeholder="Search..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder="Search clients..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               <span className="search-icon">🔍</span>
             </div>
-            <button className="add-client-btn" onClick={() => { setIsViewMode(false); setShowModal(true); }}>Add Client</button>
+            <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Client</button>
           </div>
 
           <div className="table-container shadow-box">
-            <table className="client-table">
+            <table className="supplier-table">
               <thead>
                 <tr>
-                  <th>Client ID</th><th>Client Name</th><th>Address</th><th>Email</th><th>Terms</th><th>Business Style</th><th>Tin</th><th>Action</th>
+                  <th>Client ID</th>
+                  <th>Client Name</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Business Style</th>
+                  <th>TIN</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((client) => (
-                  <tr key={client.id} style={{ zIndex: openMenuId === client.id ? 10 : 1, position: 'relative' }}>
-                    <td className="client-id-text">{client.id}</td>
-                    <td>{client.name}</td>
-                    <td className="address-cell">{client.address}</td>
-                    <td>{client.email}</td>
-                    <td>{client.terms}</td>
-                    <td>{client.businessStyle}</td>
-                    <td>{client.tin}</td>
-                    <td>
-                      <div className="action-menu-container">
-                        <button className="dots-btn" onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === client.id ? null : client.id); }}>ooo</button>
-                        {openMenuId === client.id && (
-                          <div className="action-dropdown">
-                            <div onClick={() => handleView(client)}>VIEW</div>
-                            <div onClick={() => handleArchive(client.id)}>ARCHIVE</div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+                {filteredClients.length > 0 ? (
+                  filteredClients.map((c) => (
+                    <tr key={c.customer_id}>
+                      <td>{c.customer_id}</td>
+                      <td style={{ fontWeight: 'bold' }}>{c.name}</td>
+                      <td>{c.contact}</td>
+                      <td>{c.email}</td>
+                      <td>{c.address}</td>
+                      <td>{c.business_style}</td>
+                      <td>{c.tin}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No clients found. Add one above!</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
-
-            <div className="pagination">
-              <button className="page-arrow" disabled>{'<'}</button>
-              <span>Page 1</span>
-              <button className="page-arrow" disabled>{'>'}</button>
-            </div>
           </div>
         </main>
       </div>
 
-      {/* --- ADD/VIEW CLIENT MODAL --- */}
+      {/* --- ADD CLIENT MODAL --- */}
       {showModal && (
         <div className="modal-overlay">
-          <div className="add-user-modal">
+          <div className="add-user-modal"> 
             <div className="modal-header-red">
-              <h3>{isViewMode ? "Client Information" : "Add Client"}</h3>
+              <h3>Add Client</h3>
               <button className="close-x" onClick={handleCancelAttempt}>✖</button>
             </div>
-            <form onSubmit={handleAddClient} className="modal-form">
+            <form onSubmit={handleSaveClient} className="modal-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Client Name</label>
-                  <input type="text" disabled={isViewMode} required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <label>Client Name / Company</label>
+                  <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Contact Number</label>
+                  <input type="text" required value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label>Business Style</label>
-                  <input type="text" disabled={isViewMode} required value={formData.businessStyle} onChange={(e) => setFormData({...formData, businessStyle: e.target.value})} />
+                  <input type="text" value={formData.business_style} onChange={(e) => setFormData({...formData, business_style: e.target.value})} />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Address</label>
-                  <input type="text" disabled={isViewMode} required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                  <input type="text" required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                 </div>
                 <div className="form-group">
-                  <label>Tin</label>
-                  <input type="text" disabled={isViewMode} required value={formData.tin} onChange={(e) => setFormData({...formData, tin: e.target.value})} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group" style={{ width: '48%' }}>
-                  <label>Terms</label>
-                  <input type="text" disabled={isViewMode} required value={formData.terms} onChange={(e) => setFormData({...formData, terms: e.target.value})} />
+                  <label>TIN (Tax ID)</label>
+                  <input type="text" value={formData.tin} onChange={(e) => setFormData({...formData, tin: e.target.value})} />
                 </div>
               </div>
               <div className="modal-footer">
-                {!isViewMode ? (
-                  <>
-                    <button type="submit" className="save-btn">Save Changes</button>
-                    <button type="button" className="cancel-btn" onClick={handleCancelAttempt}>Cancel</button>
-                  </>
-                ) : (
-                  <button type="button" className="cancel-btn" onClick={closeFormCompletely}>Close</button>
-                )}
+                <button type="submit" className="save-btn">Save Client</button>
+                <button type="button" className="cancel-btn" onClick={handleCancelAttempt}>Cancel</button>
               </div>
             </form>
           </div>

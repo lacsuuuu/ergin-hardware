@@ -6,28 +6,65 @@ import logo from './assets/logotrans.png';
 const GenerateReport = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  const [reportData] = useState([
-    { id: 'GIR-001', name: 'Hammer (16oz)', category: 'Hand Tools', qty: 25, unit: 'pcs', retail: 180, selling: 180 },
-    { id: 'GIR-002', name: 'Screwdriver Set (6 pcs)', category: 'Hand Tools', qty: 15, unit: 'set', retail: 350, selling: 320 },
-    { id: 'GIR-003', name: 'Paint Brush (2")', category: 'Hand Tools', qty: 25, unit: 'pcs', retail: 75, selling: 75 },
-    { id: 'GIR-004', name: 'Steel Nails (1kg)', category: 'Construction Materials', qty: 5, unit: 'kg', retail: 70, selling: 80 },
-  ]);
+  
+  // Report State
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reportData, setReportData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate totals for the bottom dashboard
-  const totalItems = reportData.length;
-  const totalValue = reportData.reduce((sum, item) => sum + (item.selling * item.qty), 0);
+  const handleGenerateReport = async (e) => {
+    e.preventDefault();
+    if (!startDate || !endDate) {
+      alert("Please select both a start and end date.");
+      return;
+    }
+    if (startDate > endDate) {
+      alert("Start Date cannot be after End Date!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReportData(data);
+      } else {
+        alert("Failed to generate report.");
+      }
+    } catch (error) {
+      console.error("Error generating report:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="outer-margin-container">
+      
+      {/* CSS to make ONLY the report print perfectly */}
+      <style>
+        {`
+          @media print {
+            .no-print { display: none !important; }
+            .connected-border-box { border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important; }
+            .dashboard-content { margin: 0 !important; padding: 0 !important; }
+            @page { margin: 1cm; }
+            body { background: white; margin: 0; }
+          }
+        `}
+      </style>
+
       <div className="connected-border-box">
+        
         {/* Sidebar */}
-        <aside className="sidebar">
+        <aside className="sidebar no-print">
           <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
             <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
@@ -35,140 +72,127 @@ const GenerateReport = () => {
             <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
             <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
             <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item active" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
+            <div className="nav-item active">GENERATE REPORT</div>
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item">CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
+          <div className="sidebar-footer">👤</div>
         </aside>
 
-        <main className="dashboard-content">
-          <header className="main-header">
-            <div className="title-area">
-              <h2><span className="icon">📋</span> Generate Inventory Report</h2>
-            </div>
+        {/* Main Content */}
+        <main className="dashboard-content" style={{ display: 'flex', flexDirection: 'column' }}>
+          
+          <header className="main-header no-print">
+            <div className="title-area"><h2><span className="icon">📈</span> Generate Reports</h2></div>
             <div className="admin-info">
-              <p>Date: {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+              <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
               <p className="welcome-text">Welcome, Admin</p>
             </div>
           </header>
 
-          <hr className="divider" />
+          <hr className="divider no-print" />
 
-          {/* Report Filters */}
-          {/* Sales Controls with Calendar Picker */}
-        <div className="sales-controls">
-        <div className="filter-group">
+          {/* Filter Controls */}
+          <div className="shadow-box no-print" style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>Sales Summary Report Filters</h3>
+            <form onSubmit={handleGenerateReport} style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Start Date</label>
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #bdc3c7', borderRadius: '4px' }} 
+                  required
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>End Date</label>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #bdc3c7', borderRadius: '4px' }} 
+                  required
+                />
+              </div>
+              <button 
+                type="submit" 
+                style={{ background: '#27ae60', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '42px' }}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Generating...' : 'Generate Report'}
+              </button>
+            </form>
+          </div>
 
-        {/* Month Dropdown */}
-        <div className="select-wrapper">
-        <label className="filter-label">From:</label>
-        <select className="filter-select">
-            <option value="1">January</option>
-            <option value="2">February</option>
-            <option value="3">March</option>
-            <option value="4">April</option>
-            <option value="5">May</option>
-            <option value="6">June</option>
-            <option value="7">July</option>
-            <option value="8">August</option>
-            <option value="9">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-        </select>
-        </div>
+          {/* Generated Report Area */}
+          {reportData && (
+            <div id="printable-report" style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #eee', flex: 1 }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #2c3e50', paddingBottom: '20px', marginBottom: '20px' }}>
+                <div>
+                  <img src={logo} alt="Ergin Hardware" style={{ height: '50px', marginBottom: '10px' }} />
+                  <h2 style={{ margin: '0', color: '#2c3e50' }}>SALES SUMMARY REPORT</h2>
+                  <p style={{ margin: '5px 0 0 0', color: '#7f8c8d' }}>ERGIN HARDWARE AND CONSTRUCTION SUPPLY</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="no-print" style={{ marginBottom: '15px' }}>
+                    <button onClick={() => window.print()} style={{ background: '#2c3e50', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      🖨️ Print Report
+                    </button>
+                  </div>
+                  <strong>Period:</strong> {reportData.start_date} to {reportData.end_date}<br/>
+                  <strong>Generated On:</strong> {currentTime.toLocaleDateString()}<br/>
+                </div>
+              </div>
 
-        <div className="select-wrapper">
-        <label className="filter-label">to:</label>
-        <select className="filter-select">
-            <option value="1">January</option>
-            <option value="2">February</option>
-            <option value="3">March</option>
-            <option value="4">April</option>
-            <option value="5">May</option>
-            <option value="6">June</option>
-            <option value="7">July</option>
-            <option value="8">August</option>
-            <option value="9">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-        </select>
-        </div>
+              <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '4px', flex: 1, borderLeft: '4px solid #3498db' }}>
+                  <div style={{ fontSize: '12px', color: '#7f8c8d', fontWeight: 'bold' }}>TOTAL TRANSACTIONS</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2c3e50' }}>{reportData.total_transactions}</div>
+                </div>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '4px', flex: 1, borderLeft: '4px solid #27ae60' }}>
+                  <div style={{ fontSize: '12px', color: '#7f8c8d', fontWeight: 'bold' }}>TOTAL REVENUE</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>₱ {reportData.total_revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                </div>
+              </div>
 
-        {/* Year Dropdown */}
-        <div className="select-wrapper">
-        <select className="filter-select">
-            <option value="2008">2008</option>
-            <option value="2009">2009</option>
-            <option value="2010">2010</option>
-            <option value="2011">2011</option>
-            <option value="2012">2012</option>
-            <option value="2013">2013</option>
-            <option value="2014">2014</option>
-            <option value="2015">2015</option>
-            <option value="2016">2016</option>
-            <option value="2017">2017</option>
-            <option value="2018">2018</option>
-            <option value="2019">2019</option>
-            <option value="2020">2020</option>
-            <option value="2021">2021</option>
-            <option value="2022">2022</option>
-            <option value="2023">2023</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-        </select>
-        </div>
-    </div>
-    </div>
-
-
-          {/* Report Table */}
-          <div className="report-table-container">
-            <table className="report-table">
-              <thead>
-                <tr>
-                  <th>Item ID</th>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Qty.</th>
-                  <th>Unit</th>
-                  <th>Retail Price</th>
-                  <th>Selling Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
-                    <td>{item.name}</td>
-                    <td>{item.category}</td>
-                    <td>{item.qty}</td>
-                    <td>{item.unit}</td>
-                    <td>₱{item.retail}</td>
-                    <td>₱{item.selling}</td>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ background: '#f1f2f6', color: '#2c3e50' }}>
+                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #bdc3c7' }}>Date</th>
+                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #bdc3c7' }}>Invoice #</th>
+                    <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #bdc3c7' }}>Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {reportData.sales_data.map((sale) => (
+                    <tr key={sale.sales_id}>
+                      <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>{sale.date}</td>
+                      <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>INV-{sale.sales_id}</td>
+                      <td style={{ padding: '10px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                        ₱ {sale.total_amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </td>
+                    </tr>
+                  ))}
+                  {reportData.sales_data.length === 0 && (
+                    <tr>
+                      <td colSpan="3" style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d', fontStyle: 'italic' }}>
+                        No sales found for the selected date range.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
 
-          {/* Bottom Dashboard Stats */}
-          <div className="stats-dashboard">
-            <div className="stat-card">
-              <div className="stat-header">Total Items</div>
-              <div className="stat-value">{totalItems}</div>
+              <div style={{ marginTop: '50px', textAlign: 'center', color: '#95a5a6', fontSize: '12px' }}>
+                *** End of Report ***
+              </div>
+
             </div>
-            <div className="stat-card">
-              <div className="stat-header">Total Inventory Value</div>
-              <div className="stat-value">₱{totalValue.toLocaleString()}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">Low Stock Items</div>
-              <div className="stat-value">--</div>
-            </div>
-          </div>
+          )}
+
         </main>
       </div>
     </div>

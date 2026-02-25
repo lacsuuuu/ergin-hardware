@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
-import BatchReport from './BatchReport'; 
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -13,28 +12,24 @@ const Inventory = () => {
   
   // Modal Toggles
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showBatchModal, setShowBatchModal] = useState(false); // Added for Batch View
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
-  // Selection state
-  const [selectedId, setSelectedId] = useState(null);
-  const [activeProduct, setActiveProduct] = useState(null); // Added to pass data to report
+  // Form Data (Matches your actual database schema now!)
   const [formData, setFormData] = useState({
-    id: 'ERG-004', name: '', category: 'Construction Materials', qty: 10, unit: '', retail: 0
+    name: '', category: '', retail: 0
   });
 
-  // --- LOGIC HANDLERS ---
+  // --- EFFECTS ---
   useEffect(() => {
     fetchInventory();
     
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
-
-    
   }, []);
 
-    const fetchInventory = async () => {
+  // --- API CALLS ---
+  const fetchInventory = async () => {
     try {
       const response = await fetch('http://127.0.0.1:5000/api/inventory');
       const data = await response.json();
@@ -44,73 +39,49 @@ const Inventory = () => {
     }
   };
 
+  const handleSave = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        triggerToast("Product profile created successfully!");
+        fetchInventory(); // Refresh the list from the database
+        closeFormCompletely();
+      } else {
+        alert("Failed to save product. Check the Flask terminal.");
+      }
+    } catch (error) {
+      console.error("Error saving:", error);
+    }
+  };
+
+  // --- HELPERS ---
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
   const handleCloseAttempt = () => {
     if (formData.name !== "") setShowDiscardModal(true);
-    else setShowAddModal(false);
+    else closeFormCompletely();
   };
 
-  const confirmDiscard = () => {
+  const closeFormCompletely = () => {
     setShowDiscardModal(false);
     setShowAddModal(false);
-    setFormData({ id: 'ERG-004', name: '', category: 'Construction Materials', qty: 10, unit: '', retail: 0 });
-  };
-
-  const handleDeleteClick = (id) => {
-    setSelectedId(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-  if (!selectedId) return;
-
-  try {
-    await fetch(`http://127.0.0.1:5000/api/inventory/${selectedId}`, {
-      method: 'DELETE',
-    });
-
-    fetchInventory();
-    setShowDeleteModal(false);
-  } catch (error) {
-    console.error("Error deleting:", error);
-  }
-};
-
-  const handleSave = async (e) => {
-  e.preventDefault();
-  
-  const newProduct = { 
-    ...formData, 
-    selling: formData.retail // or however you calculate selling price
-  };
-
-  try {
-    const response = await fetch('http://127.0.0.1:5000/api/Inventory_Log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newProduct)
-    });
-
-    if (response.ok) {
-      fetchInventory(); // <--- Refresh the list from the database
-      setShowAddModal(false);
-      // Reset form
-      setFormData({ id: 'ERG-005', name: '', category: 'Materials', qty: 0, unit: '', retail: 0 });
-    } else {
-      alert("Failed to save product");
-    }
-  } catch (error) {
-    console.error("Error saving:", error);
-  }
-};
-
-  // Function to trigger the Batch Modal
-  const handleViewBatch = (product) => {
-    setActiveProduct(product);
-    setShowBatchModal(true);
+    setFormData({ name: '', category: '', retail: 0 });
   };
 
   return (
     <div className="outer-margin-container">
+      {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
+
       <div className="connected-border-box">
         {/* Sidebar */}
         <aside className="sidebar">
@@ -155,7 +126,9 @@ const Inventory = () => {
             <div className="filter-group">
               <select className="filter-select"><option>Filter by</option></select>
               <select className="filter-select"><option>Sort by</option></select>
-              <button className="add-product-btn" onClick={() => setShowAddModal(true)}>Add Product</button>
+              <button className="add-product-btn" onClick={() => setShowAddModal(true)}>
+                + Add Product
+              </button>
             </div>
           </div>
 
@@ -164,94 +137,60 @@ const Inventory = () => {
             <table className="inventory-table">
               <thead>
                 <tr>
-                  <th>Item ID</th>
-                  <th>Product</th>
+                  <th>Product ID</th>
+                  <th>Product Name</th>
                   <th>Category</th>
-                  <th>Qty.</th>
-                  <th>Unit</th>
-                  <th>Retail Price</th>
-                  <th>Selling Price</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  <th>Stock Qty</th>
+                  <th>Unit Price</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((item) => (
-                  <tr key={item.id}>
-                    <td className="item-id-cell">{item.id}</td>
-                    <td>{item.name}</td>
-                    <td>{item.category}</td>
-                    <td>{item.qty}</td>
-                    <td>{item.unit}</td>
-                    <td>₱{item.retail}</td>
-                    <td>₱{item.selling}</td>
-                    <td>
-                      <div className="action-cell-group">
-                        <button className="delete-icon-btn" onClick={() => handleDeleteClick(item.id)}>🗑️</button>
-                        <button className="view-batch-btn" onClick={() => handleViewBatch(item)}>View Batch</button>
-                      </div>
-                    </td>
+                {products.length > 0 ? (
+                  products.map((product) => (
+                    <tr key={product.product_id}>
+                      <td>{product.product_id}</td>
+                      <td style={{ fontWeight: 'bold' }}>{product.product_name}</td>
+                      <td>{product.category}</td>
+                      <td>
+                        <span style={{ 
+                          color: product.stock > 0 ? '#27ae60' : '#e74c3c', 
+                          fontWeight: 'bold' 
+                        }}>
+                          {product.stock}
+                        </span>
+                      </td>
+                      <td>₱{product.unit_price}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </main>
       </div>
 
-      {/* --- MODAL: BATCH REPORT (INVOKED HERE) --- */}
-      {showBatchModal && (
-        <BatchReport 
-          activeProduct={activeProduct} 
-          currentTime={currentTime} 
-          onClose={() => setShowBatchModal(false)} 
-        />
-      )}
-
       {/* --- MODAL: ADD PRODUCT --- */}
       {showAddModal && (
         <div className="modal-overlay">
           <div className="add-user-modal">
             <div className="modal-header-red">
-              <h3>+ Add New Product</h3>
+              <h3>+ Create Product Profile</h3>
               <button className="close-x" onClick={handleCloseAttempt}>✖</button>
             </div>
             <form className="modal-form" onSubmit={handleSave}>
               <div className="form-row">
-                <div className="form-group">
-                  <label>Item ID:</label>
-                  <input type="text" value={formData.id} readOnly className="readonly-input" />
-                </div>
-                <div className="form-group">
-                  <label>Unit:</label>
-                  <select 
-                    required
-                    value={formData.unit} 
-                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                  >
-                    <option value="">Select Unit</option>
-                    <option value="pcs">pcs</option>
-                    <option value="set">set</option>
-                    <option value="kg">kg</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Product:</label>
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Product Name:</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Steel Nails"
                     required
+                    value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Quantity:</label>
-                  <input 
-                    type="number" 
-                    value={formData.qty}
-                    onChange={(e) => setFormData({...formData, qty: e.target.value})}
                   />
                 </div>
               </div>
@@ -261,43 +200,43 @@ const Inventory = () => {
                   <label>Category:</label>
                   <input 
                     type="text" 
+                    placeholder="e.g. Hardware"
+                    required
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Price:</label>
+                  <label>Unit Price (₱):</label>
                   <input 
                     type="number" 
-                    placeholder="₱0"
-                    onChange={(e) => setFormData({...formData, retail: e.target.value})}
+                    placeholder="₱0.00"
+                    step="0.01"
+                    required
+                    value={formData.retail}
+                    onChange={(e) => setFormData({...formData, retail: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Initial Stock:</label>
+                  <input 
+                    type="text" 
+                    value="0 (Add stock via Supplier Restock)"
+                    disabled
+                    className="readonly-input"
+                    style={{ color: '#7f8c8d', fontStyle: 'italic', backgroundColor: '#f9f9f9' }}
                   />
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button type="submit" className="save-btn">Save</button>
+                <button type="submit" className="save-btn">Save Profile</button>
                 <button type="button" className="cancel-btn" onClick={handleCloseAttempt}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL: DELETE CONFIRMATION --- */}
-      {showDeleteModal && (
-        <div className="modal-overlay alert-overlay">
-          <div className="delete-confirm-modal">
-            <div className="modal-header-red">
-              <h3>Delete Item?</h3>
-            </div>
-            <div className="delete-modal-body">
-              <p>Are you sure you want to delete this product?</p>
-              <div className="delete-modal-footer">
-                <button className="confirm-delete-btn" onClick={confirmDelete}>Confirm Delete</button>
-                <button className="cancel-delete-btn" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -312,7 +251,7 @@ const Inventory = () => {
             <div className="delete-modal-body">
               <p>Are you sure you want to quit editing?</p>
               <div className="delete-modal-footer">
-                <button className="confirm-delete-btn" onClick={confirmDiscard}>Discard Changes</button>
+                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard Changes</button>
                 <button className="cancel-delete-btn" onClick={() => setShowDiscardModal(false)}>Keep Editing</button>
               </div>
             </div>
