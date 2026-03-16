@@ -23,6 +23,6 @@ function App() {
       <Route path="clients" element={<Clients />} />
     </Routes>
   );
-}
+};
 
 export default App;

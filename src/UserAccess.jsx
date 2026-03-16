@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const UserAccess = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -29,7 +33,7 @@ const UserAccess = () => {
   // API Calls
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/employees');
+      const response = await fetch(`${API_URL}/api/employees`);
       if (response.ok) {
         const data = await response.json();
         setEmployees(data);
@@ -40,7 +44,7 @@ const UserAccess = () => {
   const handleSaveUser = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/employees', {
+      const response = await fetch(`${API_URL}/api/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

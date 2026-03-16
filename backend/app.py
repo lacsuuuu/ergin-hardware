@@ -4,6 +4,8 @@ from flask_cors import CORS
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from datetime import datetime
+from flask import request, jsonify
+from werkzeug.security import generate_password_hash
 
 #CONFIGURATION & SETUP
 load_dotenv()
@@ -433,7 +435,7 @@ def add_employee():
         print(e)
         return jsonify({"error": str(e)}), 500
 
-# 11. GENERATE REPORT ROUTES
+# GENERATE REPORT ROUTES
 @app.route('/api/reports/sales', methods=['GET'])
 def generate_sales_report():
     try:
@@ -466,7 +468,58 @@ def generate_sales_report():
 
     except Exception as e:
         print("\n!!! REPORT ERROR !!!", e)
-        return jsonify({"error": str(e)}), 500    
+        return jsonify({"error": str(e)}), 500  
+
+@app.route('/api/users/update', methods=['PUT'])
+def update_user_profile():
+    data = request.json
+    
+    # 1. Get the username that React just sent us
+    username = data.get('username')
+
+    if not username:
+        return jsonify({"error": "User identifier is missing. Cannot update."}), 400
+
+    try:
+        # 2. SMART LOOKUP: Find the numeric ID associated with this username
+        user_response = supabase.table('users').select('id').eq('username', username).execute()
+        
+        # If the user doesn't exist, stop here
+        if not user_response.data:
+            return jsonify({"error": "User not found in the database."}), 404
+            
+        # Grab the actual integer ID
+        user_id = user_response.data[0]['id']
+
+        # --- 3. SORT THE EMPLOYEE DATA ---
+        employee_data = {
+            "name": data.get('name'),
+            "contact": data.get('contact'),
+            "email": data.get('email'), 
+            "address": data.get('address'),
+            "age": data.get('age'),
+            "birthday": data.get('birthday')
+        }
+        
+        employee_clean = {k: v for k, v in employee_data.items() if v != "" and v is not None}
+
+        # --- 4. SORT THE USERS DATA (Auth) ---
+        users_data = {}
+        if data.get('password'):
+            users_data['password'] = generate_password_hash(data.get('password'))
+
+        # --- 5. SEND TO SUPABASE ---
+        if employee_clean:
+            supabase.table('employee').update(employee_clean).eq('User_ID', user_id).execute()
+            
+        if users_data:
+            supabase.table('users').update(users_data).eq('id', user_id).execute()
+
+        return jsonify({"message": "Profile updated successfully!"}), 200
+
+    except Exception as e:
+        print("Backend Update Error:", e)
+        return jsonify({"error": "Failed to update database."}), 500
        
 # START SERVER
 if __name__ == '__main__':

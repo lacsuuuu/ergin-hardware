@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const Clients = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,7 +35,7 @@ const Clients = () => {
   // --- API CALLS ---
   const fetchClients = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/clients');
+      const response = await fetch(`${API_URL}/api/clients`);
       const data = await response.json();
       setClients(data);
     } catch (error) {
@@ -42,7 +46,7 @@ const Clients = () => {
   const handleSaveClient = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/clients', {
+      const response = await fetch(`${API_URL}/api/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -106,10 +110,7 @@ const Clients = () => {
         <main className="dashboard-content">
           <header className="main-header">
             <div className="title-area"><h2><span className="icon">🤝</span> Client Management</h2></div>
-            <div className="admin-info">
-              <p className="real-time-date">Date: {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
-              <p className="welcome-text">Welcome, Admin</p>
-            </div>
+            <TopHeader userData={dashboardData} onUpdateSuccess={fetchDashboardData} />
           </header>
 
           <hr className="divider" />

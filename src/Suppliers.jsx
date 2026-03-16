@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const Suppliers = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -47,7 +51,7 @@ const Suppliers = () => {
   // --- API CALLS ---
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/suppliers');
+      const response = await fetch(`${API_URL}/api/suppliers`);
       const data = await response.json();
       setSuppliers(data);
     } catch (error) {
@@ -57,7 +61,7 @@ const Suppliers = () => {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/inventory');
+      const response = await fetch(`${API_URL}/api/inventory`);
       const data = await response.json();
       setInventoryProducts(data);
     } catch (error) {
@@ -68,7 +72,7 @@ const Suppliers = () => {
   const handleSaveSupplier = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/suppliers', {
+      const response = await fetch(`${API_URL}/api/suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -117,7 +121,7 @@ const Suppliers = () => {
     };
 
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/restock', {
+      const response = await fetch(`${API_URL}/api/restock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

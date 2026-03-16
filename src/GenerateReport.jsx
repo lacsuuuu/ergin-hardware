@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const GenerateReport = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,7 +35,7 @@ const GenerateReport = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://ergin-hardware.onrender.com/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
+      const response = await fetch(`${API_URL}/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         setReportData(data);
@@ -84,10 +88,37 @@ const GenerateReport = () => {
           
           <header className="main-header no-print">
             <div className="title-area"><h2><span className="icon">📈</span> Generate Reports</h2></div>
-            <div className="admin-info">
-              <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
-              <p className="welcome-text">Welcome, Admin</p>
-            </div>
+            <div className="admin-info" style={{ textAlign: 'right' }}>
+    <p className="real-time-date">
+      {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}
+    </p>
+    {/* Dynamic Role Display */}
+    <p className="welcome-text">
+      Welcome, <span style={{ fontWeight: 'bold', color: '#2980b9' }}>{dashboardData.user_role || 'Admin'}</span>
+    </p>
+    {/* New Update Button */}
+    <button 
+      className="update-info-btn" 
+      onClick={() => setIsModalOpen(true)} 
+      style={{
+      marginTop: '5px',
+      padding: '6px 12px',
+      backgroundColor: '#2c3e50',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '5px',
+      float: 'right'
+  }}
+>
+  ⚙️ Update Information
+</button>
+  </div>
           </header>
 
           <hr className="divider no-print" />

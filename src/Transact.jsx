@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+  
 const Transact = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -34,7 +38,7 @@ const Transact = () => {
   // --- API CALLS ---
   const fetchInventory = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/inventory');
+      const response = await fetch(`${API_URL}/api/inventory`);
       const data = await response.json();
       setInventory(data);
     } catch (error) { console.error("Error fetching inventory:", error); }
@@ -42,7 +46,7 @@ const Transact = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/clients');
+      const response = await fetch(`${API_URL}/api/clients`);
       const data = await response.json();
       setClients(data);
     } catch (error) { console.error("Error fetching clients:", error); }
@@ -52,7 +56,7 @@ const Transact = () => {
   const handleQuickAddClient = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/clients', {
+      const response = await fetch(`${API_URL}/api/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClientData)
@@ -135,7 +139,7 @@ const Transact = () => {
     };
 
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/sales', {
+      const response = await fetch(`${API_URL}/api/sales`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

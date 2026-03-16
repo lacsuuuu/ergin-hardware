@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import logo from './assets/logotrans.png';
 import './index.css';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 function LoginPage() {
   const navigate = useNavigate();
   
@@ -21,7 +25,7 @@ function LoginPage() {
     try {
       // 1. Send Username/Password to Backend
       // Notice we are sending keys 'username' and 'password' to match Python
-      const response = await fetch('https://ergin-hardware.onrender.com/api/login', {
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

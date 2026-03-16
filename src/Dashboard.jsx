@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import TopHeader from './TopHeader';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+
+
+
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const Dashboard = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -25,7 +34,7 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/dashboard');
+      const response = await fetch(`${API_URL}/api/dashboard`);
       if (response.ok) {
         const data = await response.json();
         setDashboardData(data);
@@ -58,12 +67,11 @@ const Dashboard = () => {
         {/* Main Content */}
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2><span className="icon">📊</span> Business Dashboard</h2></div>
-            <div className="admin-info">
-              <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
-              <p className="welcome-text">Welcome, Admin</p>
-            </div>
-          </header>
+  <div className="title-area">
+    <h2><span className="icon">📊</span> Business Dashboard</h2>
+  </div>
+  <TopHeader userData={dashboardData} onUpdateSuccess={fetchDashboardData} />
+</header>
 
           <hr className="divider" style={{ marginBottom: '20px' }} />
 

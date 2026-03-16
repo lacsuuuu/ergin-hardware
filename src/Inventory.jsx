@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000' 
+  : 'https://ergin-hardware.onrender.com';
+
 const Inventory = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,7 +35,7 @@ const Inventory = () => {
   // --- API CALLS ---
   const fetchInventory = async () => {
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/inventory');
+      const response = await fetch('${API_URL}/api/inventory');
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -43,7 +47,7 @@ const Inventory = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('https://ergin-hardware.onrender.com/api/product', {
+      const response = await fetch('${API_URL}/api/product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
