@@ -32,7 +32,7 @@ const TopHeader = ({ userData, onUpdateSuccess }) => {
         style={{
           marginTop: '5px',
           padding: '6px 12px',
-          backgroundColor: '#2c3e50',
+          backgroundColor: '#ac372f',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
@@ -44,7 +44,7 @@ const TopHeader = ({ userData, onUpdateSuccess }) => {
           gap: '5px'
         }}
       >
-        ⚙️ Update Information
+      Update Information
       </button>
 
       {/* The Hidden Modal */}

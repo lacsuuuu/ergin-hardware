@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import TopHeader from './TopHeader';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -92,11 +93,8 @@ const SalesRecord = () => {
         {/* Main Content */}
         <main className="dashboard-content no-print">
           <header className="main-header">
-            <div className="title-area"><h2><span className="icon">📖</span> Sales Ledger</h2></div>
-            <div className="admin-info">
-              <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
-              <p className="welcome-text">Welcome, Admin</p>
-            </div>
+            <div className="title-area"><h2>Sales Ledger</h2></div>
+            <TopHeader />
           </header>
 
           <hr className="divider" />
@@ -111,7 +109,6 @@ const SalesRecord = () => {
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
               />
-              <span className="search-icon">🔍</span>
             </div>
           </div>
 

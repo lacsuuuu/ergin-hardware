@@ -4,13 +4,14 @@ from flask_cors import CORS
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from datetime import datetime
-from flask import request, jsonify
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
-#CONFIGURATION & SETUP
+# ==========================================
+# CONFIGURATION & SETUP
+# ==========================================
 load_dotenv()
 app = Flask(__name__)
-CORS(app) # Allows React to talk to Flask
+CORS(app)
 
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
@@ -20,10 +21,12 @@ if not url or not key:
 
 supabase: Client = create_client(url, key)
 
-#SUPPLIER ROUTES
-# READ: Get all suppliers
+# ==========================================
+# SUPPLIER MANAGEMENT
+# ==========================================
 @app.route('/api/suppliers', methods=['GET'])
 def get_suppliers():
+    # Retrieves all records from the supplier table
     try:
         response = supabase.table('supplier').select("*").execute()
         return jsonify(response.data)
@@ -31,14 +34,11 @@ def get_suppliers():
         print("--- GET SUPPLIERS ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# CREATE: Add a new supplier
 @app.route('/api/suppliers', methods=['POST'])
 def add_supplier():
+    # Inserts a new supplier record into the database
     try:
         data = request.json
-        print("--- INCOMING SUPPLIER DATA ---", data)
-        
-        # Translate React data to exactly match your DB columns
         mapped_data = {
             "supplier_name": data.get("name"),   
             "contact": data.get("contact"),
@@ -48,14 +48,15 @@ def add_supplier():
         response = supabase.table('supplier').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
-        print("\n!!! ADD SUPPLIER ERROR !!!")
-        print(e)
+        print("--- ADD SUPPLIER ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-#PRODUCT (INVENTORY) ROUTES
-# READ: Get all products
+# ==========================================
+# PRODUCT & INVENTORY MANAGEMENT
+# ==========================================
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
+    # Retrieves all products from the inventory
     try:
         response = supabase.table('product').select("*").execute()
         return jsonify(response.data)
@@ -63,13 +64,11 @@ def get_inventory():
         print("--- GET INVENTORY ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# CREATE: Add a new product (Profile only, stock starts at 0)
 @app.route('/api/product', methods=['POST'])
 def add_product():
+    # Creates a new product profile with an initial stock of 0
     try:
         data = request.json
-        print("--- INCOMING PRODUCT DATA ---", data)
-        
         mapped_data = {
             "product_name": data.get("name"),
             "category": data.get("category"),
@@ -80,63 +79,63 @@ def add_product():
         response = supabase.table('product').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
-        print("\n!!! ADD PRODUCT ERROR !!!")
-        print(e)
+        print("--- ADD PRODUCT ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# DELETE: Remove an item
 @app.route('/api/inventory/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
+    # Deletes a specific product from the inventory by product_id
     try:
         response = supabase.table('product').delete().eq('product_id', item_id).execute()
         return jsonify(response.data)
     except Exception as e:
-        print("--- DELETE ERROR ---", e)
+        print("--- DELETE PRODUCT ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-#USER AUTHENTICATION (Saved for later)
+# ==========================================
+# USER AUTHENTICATION
+# ==========================================
 @app.route('/api/login', methods=['POST'])
 def login():
+    # Authenticates a user using secure password hashing with a plaintext fallback
     try:
         data = request.json
         inp_username = data.get('username')
         inp_password = data.get('password')
 
-        response = supabase.table('users').select("username, role")\
-            .eq('username', inp_username)\
-            .eq('password', inp_password)\
-            .execute()
-        
+        response = supabase.table('users').select("username, role, password").eq('username', inp_username).execute()
         user_list = response.data
 
         if len(user_list) > 0:
             user = user_list[0]
-            return jsonify({"success": True, "username": user['username'], "role": user['role']})
+            db_password = user['password']
+
+            if check_password_hash(db_password, inp_password) or db_password == inp_password:
+                return jsonify({"success": True, "username": user['username'], "role": user['role']})
+            else:
+                return jsonify({"success": False, "message": "Invalid password"}), 401
         else:
-            return jsonify({"success": False, "message": "Invalid login"}), 401
+            return jsonify({"success": False, "message": "Invalid username"}), 401
 
     except Exception as e:
-        print("Login Error:", e) 
+        print("--- LOGIN ERROR ---", e) 
         return jsonify({"error": str(e)}), 500
 
-
-#TRANSACTIONS (RESTOCK)
+# ==========================================
+# RESTOCKING TRANSACTIONS
+# ==========================================
 @app.route('/api/restock', methods=['POST'])
 def process_restock():
+    # Processes a complex delivery transaction across multiple tables
     try:
         data = request.json
-        print("--- INCOMING RESTOCK DATA ---", data)
-        
         supplier_id = data.get('supplier_id')
-        # Hardcoding employee_id to 1 for now until you have user login sessions
-        employee_id = 1 
+        employee_id = 1  # Hardcoded pending session implementation
         total_cost = data.get('total_cost')
-        items = data.get('items', []) # The list of products in the delivery
-        
-        # Get today's date formatted for PostgreSQL (YYYY-MM-DD)
+        items = data.get('items', [])
         current_date = datetime.now().strftime('%Y-%m-%d')
         
-        # --- 1. Create the Receipt (restock table) ---
+        # Insert parent restock record
         restock_payload = {
             "date": current_date,
             "supplier_id": supplier_id,
@@ -146,13 +145,12 @@ def process_restock():
         restock_res = supabase.table('restock').insert(restock_payload).execute()
         batch_id = restock_res.data[0]['batch_id']
         
-        # --- 2, 3, & 4. Process Each Item ---
+        # Process individual line items
         for item in items:
             p_id = item['product_id']
             qty = int(item['quantity'])
             u_cost = float(item['unit_cost'])
             
-            # Step 2: Save line item (restock_detail)
             supabase.table('restock_detail').insert({
                 "batch_id": batch_id,
                 "product_id": p_id,
@@ -160,18 +158,14 @@ def process_restock():
                 "unit_cost": u_cost
             }).execute()
             
-            # Step 3: Update Live Inventory (product table)
-            # Fetch current stock
             prod_data = supabase.table('product').select('stock').eq('product_id', p_id).execute()
             current_stock = prod_data.data[0]['stock'] if prod_data.data else 0
             
-            # Add new qty to current stock and link the supplier
             supabase.table('product').update({
                 "stock": current_stock + qty,
                 "supplier_id": supplier_id
             }).eq('product_id', p_id).execute()
             
-            # Step 4: Write to Audit Log (inventory_log)
             supabase.table('inventory_log').insert({
                 "product_id": p_id,
                 "transaction_type": "Restock",
@@ -179,17 +173,18 @@ def process_restock():
                 "date": current_date
             }).execute()
 
-        print(f"--- RESTOCK BATCH #{batch_id} SUCCESSFUL ---")
         return jsonify({"success": True, "batch_id": batch_id}), 201
 
     except Exception as e:
-        print("\n!!! RESTOCK TRANSACTION FAILED !!!")
-        print(e)
+        print("--- RESTOCK TRANSACTION ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-#READ: Get all clients
+# ==========================================
+# CLIENT MANAGEMENT
+# ==========================================
 @app.route('/api/clients', methods=['GET'])
 def get_clients():
+    # Retrieves all customer records
     try:
         response = supabase.table('customer').select("*").execute()
         return jsonify(response.data)
@@ -197,14 +192,11 @@ def get_clients():
         print("--- GET CLIENTS ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-#CREATE: Add a new client
 @app.route('/api/clients', methods=['POST'])
 def add_client():
+    # Inserts a new customer record
     try:
         data = request.json
-        print("--- INCOMING CLIENT DATA ---", data)
-        
-        # Translate React data to match your 'customer' table perfectly
         mapped_data = {
             "name": data.get("name"),
             "address": data.get("address"),
@@ -217,25 +209,25 @@ def add_client():
         response = supabase.table('customer').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
-        print("\n!!! ADD CLIENT ERROR !!!")
-        print(e)
+        print("--- ADD CLIENT ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-#TRANSACTIONS (SALES / POS)
+# ==========================================
+# POS / SALES TRANSACTIONS
+# ==========================================
 @app.route('/api/sales', methods=['POST'])
 def process_sale():
+    # Processes a POS transaction, deducts stock, and logs the event
     try:
         data = request.json
-        print("--- INCOMING SALE DATA ---", data)
-        
         customer_id = data.get('customer_id')
-        employee_id = 1 # Hardcoded until user sessions are built
+        employee_id = 1  # Hardcoded pending session implementation
         total_amount = data.get('total_amount')
-        items = data.get('items', []) # The cart items
+        items = data.get('items', [])
         
         current_date = datetime.now().strftime('%Y-%m-%d')
         
-        # --- 1. Create the Receipt (sales_transaction) ---
+        # Insert parent sales record
         sale_payload = {
             "date": current_date,
             "customer_id": customer_id,
@@ -245,14 +237,13 @@ def process_sale():
         sale_res = supabase.table('sales_transaction').insert(sale_payload).execute()
         sales_id = sale_res.data[0]['sales_id']
         
-        # --- 2, 3, & 4. Process Each Item in the Cart ---
+        # Process individual cart items
         for item in items:
             p_id = item['product_id']
             qty = int(item['quantity'])
             price = float(item['price'])
             subtotal = float(item['subtotal'])
             
-            # Step 2: Save line item (sales_details)
             supabase.table('sales_details').insert({
                 "sales_id": sales_id,
                 "product_id": p_id,
@@ -261,52 +252,44 @@ def process_sale():
                 "subtotal": subtotal
             }).execute()
             
-            # Step 3: Deduct Live Inventory (product table)
             prod_data = supabase.table('product').select('stock').eq('product_id', p_id).execute()
             current_stock = prod_data.data[0]['stock'] if prod_data.data else 0
             
             supabase.table('product').update({
-                "stock": current_stock - qty # DEDUCTING stock here!
+                "stock": current_stock - qty 
             }).eq('product_id', p_id).execute()
             
-            # Step 4: Write to Audit Log (inventory_log)
             supabase.table('inventory_log').insert({
                 "product_id": p_id,
                 "transaction_type": "Sale",
-                "quantity_change": -qty, # Negative number to show it left the warehouse
+                "quantity_change": -qty, 
                 "date": current_date
             }).execute()
 
-        print(f"--- SALE #{sales_id} SUCCESSFUL ---")
         return jsonify({"success": True, "sales_id": sales_id}), 201
 
     except Exception as e:
-        print("\n!!! SALE TRANSACTION FAILED !!!")
-        print(e)
+        print("--- SALE TRANSACTION ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# 8. DASHBOARD ROUTES
+# ==========================================
+# DASHBOARD METRICS
+# ==========================================
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
+    # Aggregates KPI data for the main dashboard view
     try:
-        # 1. Fetch Products to find Low Stock items
         prod_res = supabase.table('product').select('*').execute()
         products = prod_res.data
         
-        # Filter for items that have 10 or fewer in stock
         low_stock_items = [p for p in products if p.get('stock', 0) <= 10]
         
-        # 2. Fetch Sales to calculate Revenue
         sales_res = supabase.table('sales_transaction').select('*').execute()
         sales = sales_res.data
         
-        # Calculate total revenue across all time (you can filter by month later!)
         total_revenue = sum(float(s.get('total_amount', 0)) for s in sales)
-        
-        # Sort sales to get the 5 most recent ones
         recent_sales = sorted(sales, key=lambda x: x['sales_id'], reverse=True)[:5]
         
-        # Package it all up for React
         dashboard_data = {
             "total_revenue": total_revenue,
             "total_sales_count": len(sales),
@@ -319,53 +302,48 @@ def get_dashboard_data():
         return jsonify(dashboard_data), 200
 
     except Exception as e:
-        print("\n!!! DASHBOARD ERROR !!!")
-        print(e)
+        print("--- DASHBOARD ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# 9. SALES RECORD (LEDGER) ROUTES
+# ==========================================
+# SALES LEDGER & REPORTING
+# ==========================================
 @app.route('/api/sales-record', methods=['GET'])
 def get_sales_records():
+    # Retrieves all sales transactions and joins customer names
     try:
-        # Fetch all sales
         sales_res = supabase.table('sales_transaction').select('*').execute()
         sales = sales_res.data
         
-        # Fetch all customers so we can attach their names to the table
         customers_res = supabase.table('customer').select('*').execute()
         customers = {c['customer_id']: c for c in customers_res.data}
         
-        # Merge the customer name into the sale data
         for sale in sales:
             c_id = sale.get('customer_id')
             sale['customer_name'] = customers.get(c_id, {}).get('name', 'Unknown')
             
-        # Sort newest to oldest
         sales_sorted = sorted(sales, key=lambda x: x['sales_id'], reverse=True)
         return jsonify(sales_sorted), 200
 
     except Exception as e:
-        print("\n!!! SALES RECORD ERROR !!!", e)
+        print("--- SALES RECORD ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/sales/<int:sales_id>', methods=['GET'])
 def get_sale_details(sales_id):
+    # Retrieves comprehensive details for a specific sales invoice
     try:
-        # 1. Get Sale Header
         sale_res = supabase.table('sales_transaction').select('*').eq('sales_id', sales_id).execute()
         if not sale_res.data:
             return jsonify({"error": "Sale not found"}), 404
         sale = sale_res.data[0]
         
-        # 2. Get Customer Details
         cust_res = supabase.table('customer').select('*').eq('customer_id', sale['customer_id']).execute()
         customer = cust_res.data[0] if cust_res.data else {}
         
-        # 3. Get Line Items
         items_res = supabase.table('sales_details').select('*').eq('sales_id', sales_id).execute()
         items = items_res.data
         
-        # 4. Get Product Names for the line items
         for item in items:
             prod_res = supabase.table('product').select('product_name').eq('product_id', item['product_id']).execute()
             item['name'] = prod_res.data[0]['product_name'] if prod_res.data else "Unknown Product"
@@ -377,20 +355,53 @@ def get_sale_details(sales_id):
         }), 200
 
     except Exception as e:
-        print(f"\n!!! GET SALE {sales_id} ERROR !!!", e)
+        print(f"--- GET SALE {sales_id} ERROR ---", e)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/reports/sales', methods=['GET'])
+def generate_sales_report():
+    # Generates a sales revenue report based on a specific date range
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"error": "Please provide start_date and end_date"}), 400
+            
+        res = supabase.table('sales_transaction')\
+            .select('*')\
+            .gte('date', start_date)\
+            .lte('date', end_date)\
+            .execute()
+            
+        sales = res.data
+        total_revenue = sum(float(s['total_amount']) for s in sales)
+        
+        return jsonify({
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_transactions": len(sales),
+            "total_revenue": total_revenue,
+            "sales_data": sorted(sales, key=lambda x: x['date']) 
+        }), 200
+
+    except Exception as e:
+        print("--- REPORT ERROR ---", e)
+        return jsonify({"error": str(e)}), 500  
+
+# ==========================================
+# EMPLOYEE & USER MANAGEMENT
+# ==========================================
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
+    # Retrieves employee profiles and joins their respective user auth roles
     try:
-        # Fetch employees
         emp_res = supabase.table('employee').select('*').execute()
         employees = emp_res.data
         
-        # Fetch users to match usernames and roles
         users_res = supabase.table('users').select('*').execute()
         users = {u['id']: u for u in users_res.data}
         
-        # Combine the data so React gets one clean list
         for emp in employees:
             u_id = emp.get('User_ID')
             user_info = users.get(u_id, {})
@@ -399,17 +410,15 @@ def get_employees():
             
         return jsonify(employees), 200
     except Exception as e:
-        print("\n!!! GET EMPLOYEES ERROR !!!", e)
+        print("--- GET EMPLOYEES ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
-# USER ACCESS & EMPLOYEE ROUTES
 @app.route('/api/employees', methods=['POST'])
 def add_employee():
+    # Creates both a system login account and an employee profile 
     try:
         data = request.json
-        print("--- INCOMING EMPLOYEE DATA ---", data)
         
-        # --- 1. Create the Login Account (users table) ---
         user_payload = {
             "username": data.get("username"),
             "password": data.get("password"),
@@ -418,80 +427,38 @@ def add_employee():
         user_res = supabase.table('users').insert(user_payload).execute()
         new_user_id = user_res.data[0]['id']
         
-        # --- 2. Create the Employee Profile (employee table) ---
         emp_payload = {
             "name": data.get("name"),
             "contact": data.get("contact"),
             "email": data.get("email"),
             "address": data.get("address"),
-            "User_ID": new_user_id # Link them together!
+            "User_ID": new_user_id 
         }
         supabase.table('employee').insert(emp_payload).execute()
         
         return jsonify({"success": True, "message": "User created!"}), 201
 
     except Exception as e:
-        print("\n!!! ADD EMPLOYEE ERROR !!!")
-        print(e)
+        print("--- ADD EMPLOYEE ERROR ---", e)
         return jsonify({"error": str(e)}), 500
-
-# GENERATE REPORT ROUTES
-@app.route('/api/reports/sales', methods=['GET'])
-def generate_sales_report():
-    try:
-        # Get the dates sent from React's date pickers
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        
-        if not start_date or not end_date:
-            return jsonify({"error": "Please provide start_date and end_date"}), 400
-            
-        # Fetch sales strictly within that date range!
-        res = supabase.table('sales_transaction')\
-            .select('*')\
-            .gte('date', start_date)\
-            .lte('date', end_date)\
-            .execute()
-            
-        sales = res.data
-        
-        # Calculate the math so React doesn't have to
-        total_revenue = sum(float(s['total_amount']) for s in sales)
-        
-        return jsonify({
-            "start_date": start_date,
-            "end_date": end_date,
-            "total_transactions": len(sales),
-            "total_revenue": total_revenue,
-            "sales_data": sorted(sales, key=lambda x: x['date']) # Sort by oldest to newest
-        }), 200
-
-    except Exception as e:
-        print("\n!!! REPORT ERROR !!!", e)
-        return jsonify({"error": str(e)}), 500  
 
 @app.route('/api/users/update', methods=['PUT'])
 def update_user_profile():
+    # Updates the profile and auth credentials for the active user
     data = request.json
-    
-    # 1. Get the username that React just sent us
     username = data.get('username')
 
     if not username:
         return jsonify({"error": "User identifier is missing. Cannot update."}), 400
 
     try:
-        # 2. SMART LOOKUP: Find the numeric ID associated with this username
         user_response = supabase.table('users').select('id').eq('username', username).execute()
         
-        # If the user doesn't exist, stop here
         if not user_response.data:
             return jsonify({"error": "User not found in the database."}), 404
             
-        # Grab the actual integer ID
         user_id = user_response.data[0]['id']
 
-        # --- 3. SORT THE EMPLOYEE DATA ---
         employee_data = {
             "name": data.get('name'),
             "contact": data.get('contact'),
@@ -500,15 +467,12 @@ def update_user_profile():
             "age": data.get('age'),
             "birthday": data.get('birthday')
         }
-        
         employee_clean = {k: v for k, v in employee_data.items() if v != "" and v is not None}
 
-        # --- 4. SORT THE USERS DATA (Auth) ---
         users_data = {}
         if data.get('password'):
             users_data['password'] = generate_password_hash(data.get('password'))
 
-        # --- 5. SEND TO SUPABASE ---
         if employee_clean:
             supabase.table('employee').update(employee_clean).eq('User_ID', user_id).execute()
             
@@ -518,11 +482,65 @@ def update_user_profile():
         return jsonify({"message": "Profile updated successfully!"}), 200
 
     except Exception as e:
-        print("Backend Update Error:", e)
+        print("--- PROFILE UPDATE ERROR ---", e)
         return jsonify({"error": "Failed to update database."}), 500
-       
-# START SERVER
+    
+# ==========================================
+# BATCH TRACKING (FIFO INVENTORY)
+# ==========================================
+@app.route('/api/stock/receive', methods=['POST'])
+def receive_stock():
+    # Logs individual incoming deliveries to product_batches and updates master inventory
+    try:
+        data = request.json
+        product_id = data.get('product_id')
+        supplier_name = data.get('supplier_name')
+        qty_received = int(data.get('qty_received', 0)) 
+
+        if not product_id or not supplier_name or qty_received <= 0:
+            return jsonify({"error": "Missing required fields or invalid quantity"}), 400
+
+        batch_data = {
+            "product_id": product_id,
+            "supplier_name": supplier_name,
+            "qty_received": qty_received,
+            "qty_remaining": qty_received 
+        }
+        supabase.table('product_batches').insert(batch_data).execute()
+
+        product_res = supabase.table('product').select('stock').eq('product_id', product_id).execute()
+        
+        if not product_res.data:
+            return jsonify({"error": "Product not found in main inventory."}), 404
+            
+        current_stock = product_res.data[0]['stock']
+        new_total_stock = current_stock + qty_received
+
+        supabase.table('product').update({"stock": new_total_stock}).eq('product_id', product_id).execute()
+
+        return jsonify({
+            "message": "Stock received and batch logged successfully!", 
+            "new_total": new_total_stock
+        }), 200
+
+    except Exception as e:
+        print("--- RECEIVE STOCK ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/batches/<int:product_id>', methods=['GET'])
+def get_product_batches(product_id):
+    # Retrieves all delivery batches for a specific product for the Batch Report
+    try:
+        # Fetch batches and order them by date_received (oldest first for FIFO viewing)
+        res = supabase.table('product_batches').select('*').eq('product_id', product_id).order('date_received').execute()
+        return jsonify(res.data), 200
+    except Exception as e:
+        print(f"--- GET BATCHES ERROR ---", e)
+        return jsonify({"error": str(e)}), 500  
+         
+# ==========================================
+# SERVER INITIALIZATION
+# ==========================================
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)

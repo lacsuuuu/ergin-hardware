@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import logo from './assets/logotrans.png';
 import './index.css';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 

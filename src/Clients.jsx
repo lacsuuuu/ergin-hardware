@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import TopHeader from './TopHeader';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -109,8 +110,8 @@ const Clients = () => {
 
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2><span className="icon">🤝</span> Client Management</h2></div>
-            <TopHeader userData={dashboardData} onUpdateSuccess={fetchDashboardData} />
+            <div className="title-area"><h2>Client Management</h2></div>
+            <TopHeader />
           </header>
 
           <hr className="divider" />
@@ -118,7 +119,6 @@ const Clients = () => {
           <div className="supplier-controls">
             <div className="search-wrapper">
               <input type="text" placeholder="Search clients..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <span className="search-icon">🔍</span>
             </div>
             <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Client</button>
           </div>

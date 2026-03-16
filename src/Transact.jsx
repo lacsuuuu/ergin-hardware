@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
   
@@ -201,7 +201,7 @@ const Transact = () => {
           {/* LEFT SIDE: Products List */}
           <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
             <header className="main-header" style={{ marginBottom: '20px' }}>
-              <div className="title-area"><h2><span className="icon">🛒</span> Point of Sale</h2></div>
+              <div className="title-area"><h2>Point of Sale</h2></div>
               <div className="admin-info">
                 <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
               </div>
@@ -210,7 +210,7 @@ const Transact = () => {
             <div style={{ marginBottom: '15px' }}>
               <input 
                 type="text" 
-                placeholder="🔍 Search products or SCAN BARCODE (Press Enter)..." 
+                placeholder="Search products or SCAN BARCODE (Press Enter)..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleBarcodeScan}
@@ -240,7 +240,7 @@ const Transact = () => {
                       <td style={{ textAlign: 'center' }}>
                         <button 
                           onClick={() => addToCart(p)}
-                          style={{ background: '#3498db', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: p.stock > 0 ? 'pointer' : 'not-allowed', opacity: p.stock > 0 ? 1 : 0.5 }}
+                          style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: p.stock > 0 ? 'pointer' : 'not-allowed', opacity: p.stock > 0 ? 1 : 0.5 }}
                           disabled={p.stock <= 0}
                         >
                           Add to Cart
@@ -275,7 +275,7 @@ const Transact = () => {
                 </select>
                 <button 
                   onClick={() => setShowNewClientModal(true)}
-                  style={{ background: '#f39c12', color: 'white', border: 'none', padding: '0 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                  style={{ background: '#ac372f', color: 'white', border: 'none', padding: '0 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                   + New
                 </button>
@@ -310,7 +310,7 @@ const Transact = () => {
               <button 
                 onClick={handleCheckout}
                 disabled={cart.length === 0}
-                style={{ width: '100%', background: cart.length > 0 ? '#27ae60' : '#bdc3c7', color: '#fff', border: 'none', padding: '15px', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: cart.length > 0 ? 'pointer' : 'not-allowed' }}
+                style={{ width: '100%', background: cart.length > 0 ? '#ac372f' : '#bdc3c7', color: '#fff', border: 'none', padding: '15px', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: cart.length > 0 ? 'pointer' : 'not-allowed' }}
               >
                 Complete Checkout
               </button>

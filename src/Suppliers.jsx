@@ -2,50 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import TopHeader from './TopHeader';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
 const Suppliers = () => {
   const navigate = useNavigate();
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // --- MODAL & ACTION STATES ---
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showRestockModal, setShowRestockModal] = useState(false); // NEW
-  const [toast, setToast] = useState({ show: false, message: '', type: '' });
-
-  // --- DATA STATE ---
-  const [suppliers, setSuppliers] = useState([]);
-  const [inventoryProducts, setInventoryProducts] = useState([]); // NEW: For the dropdown
-  const [selectedSupplier, setSelectedSupplier] = useState(null); // NEW
   
-  const [formData, setFormData] = useState({
-    name: '', contact: '', address: ''
-  });
+  // --- STATE MANAGEMENT ---
+  const [suppliers, setSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+  
+  // Modal Toggles
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [isLoading, setIsLoading] = useState(false);
 
-  // NEW: State for the items in the current delivery
-  const [restockItems, setRestockItems] = useState([
-    { product_id: '', quantity: 0, unit_cost: 0 }
-  ]);
+  // --- NEW STATES FOR ACTION MENU & EDIT/ARCHIVE ---
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+
+  // Form Data 
+  const [receiveData, setReceiveData] = useState({
+    product_id: '', supplier_name: '', qty_received: ''
+  });
+  const [editData, setEditData] = useState({
+    supplier_name: '', contact: '', address: ''
+  });
 
   // --- EFFECTS ---
   useEffect(() => {
     fetchSuppliers();
-    fetchInventory(); // Fetch products so we can select them in the modal
-    
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    const handleClickOutside = () => setOpenMenuId(null);
-    window.addEventListener('click', handleClickOutside);
-    
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('click', handleClickOutside);
-    };
+    fetchProducts();
   }, []);
 
   // --- API CALLS ---
@@ -59,84 +51,74 @@ const Suppliers = () => {
     }
   };
 
-  const fetchInventory = async () => {
+  const fetchProducts = async () => {
     try {
       const response = await fetch(`${API_URL}/api/inventory`);
       const data = await response.json();
-      setInventoryProducts(data);
+      setProducts(data);
     } catch (error) {
-      console.error("Error fetching inventory:", error);
+      console.error("Error fetching products:", error);
     }
   };
 
-  const handleSaveSupplier = async (e) => {
+  const handleReceiveStock = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    
     try {
-      const response = await fetch(`${API_URL}/api/suppliers`, {
+      const response = await fetch(`${API_URL}/api/stock/receive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          product_id: receiveData.product_id,
+          supplier_name: receiveData.supplier_name,
+          qty_received: parseInt(receiveData.qty_received)
+        })
       });
 
       if (response.ok) {
-        triggerToast("New supplier added!");
-        fetchSuppliers(); 
-        closeFormCompletely();
+        triggerToast("Stock received successfully!");
+        setShowReceiveModal(false);
+        setReceiveData({ product_id: '', supplier_name: '', qty_received: '' });
+        fetchProducts(); // Refresh products to show new stock!
       } else {
-        alert("Failed to save supplier. Check Flask terminal.");
+        const err = await response.json();
+        alert(`Failed: ${err.error}`);
       }
     } catch (error) {
-      console.error("Error saving supplier:", error);
+      console.error("Error receiving stock:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // --- RESTOCK LOGIC ---
-  const openRestockModal = (supplier) => {
+  // --- NEW ACTION HANDLERS ---
+  const openEditModal = (supplier) => {
     setSelectedSupplier(supplier);
-    setRestockItems([{ product_id: '', quantity: 0, unit_cost: 0 }]);
-    setShowRestockModal(true);
-    setOpenMenuId(null);
+    setEditData({
+      supplier_name: supplier.supplier_name,
+      contact: supplier.contact,
+      address: supplier.address
+    });
+    setShowEditModal(true);
+    setActiveDropdown(null);
   };
 
-  const handleAddRestockRow = () => {
-    setRestockItems([...restockItems, { product_id: '', quantity: 0, unit_cost: 0 }]);
+  const openArchiveModal = (supplier) => {
+    setSelectedSupplier(supplier);
+    setShowArchiveModal(true);
+    setActiveDropdown(null);
   };
 
-  const handleRestockItemChange = (index, field, value) => {
-    const updatedItems = [...restockItems];
-    updatedItems[index][field] = value;
-    setRestockItems(updatedItems);
-  };
-
-  const handleRestockSubmit = async (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    
-    // Auto-calculate the total cost of the delivery
-    const totalCost = restockItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
-    
-    const payload = {
-      supplier_id: selectedSupplier.supplier_id, // Ensure we send the correct ID
-      total_cost: totalCost,
-      items: restockItems
-    };
+    alert(`Save functionality for ${editData.supplier_name} coming soon!`);
+    setShowEditModal(false);
+  };
 
-    try {
-      const response = await fetch(`${API_URL}/api/restock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        triggerToast("Delivery received! Inventory updated successfully.");
-        fetchInventory(); // Refresh inventory data in the background
-        closeFormCompletely();
-      } else {
-        alert("Failed to process restock. Check Flask terminal.");
-      }
-    } catch (error) {
-      console.error("Error processing restock:", error);
-    }
+  const handleArchiveSubmit = async () => {
+    alert(`Archive functionality for ${selectedSupplier.supplier_name} coming soon!`);
+    setShowArchiveModal(false);
   };
 
   // --- HELPERS ---
@@ -145,31 +127,16 @@ const Suppliers = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  const handleCancelAttempt = () => {
-    const hasData = Object.values(formData).some(val => val !== '');
-    if (hasData) setShowDiscardModal(true);
-    else closeFormCompletely();
-  };
-
-  const closeFormCompletely = () => {
-    setShowModal(false);
-    setShowDiscardModal(false);
-    setShowRestockModal(false);
-    setFormData({ name: '', contact: '', address: '' });
-  };
-
-  const filteredSuppliers = suppliers.filter(s =>
-    (s.supplier_name && s.supplier_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (s.contact && s.contact.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
   return (
     <div className="outer-margin-container">
       {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
 
       <div className="connected-border-box">
+        {/* Sidebar */}
         <aside className="sidebar">
-          <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
+          <div className="logo-section">
+            <img src={logo} alt="Ergin Hardware" className="sidebar-logo" />
+          </div>
           <nav className="side-nav">
             <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
             <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
@@ -183,68 +150,100 @@ const Suppliers = () => {
           <div className="sidebar-footer">👤</div>
         </aside>
 
+        {/* Main Content */}
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2><span className="icon">🚚</span> Supplier Management</h2></div>
-            <div className="admin-info">
-              <p className="real-time-date">Date: {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
-              <p className="welcome-text">Welcome, Admin</p>
+            <div className="title-area">
+              <h2>Supplier Management</h2>
             </div>
+            <TopHeader />
           </header>
 
           <hr className="divider" />
 
-          <div className="supplier-controls">
+          {/* Controls Area */}
+          <div className="inventory-controls" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <div className="search-wrapper">
-              <input type="text" placeholder="Search suppliers..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <span className="search-icon">🔍</span>
+              <input type="text" placeholder="Search suppliers..." className="search-input" />
             </div>
-            <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Supplier</button>
+            <div className="filter-group">
+              <button 
+                className="add-product-btn" 
+                style={{ backgroundColor: '#d3f2f' }} 
+                onClick={() => setShowReceiveModal(true)}
+              >
+                Receive Stock
+              </button>
+            </div>
           </div>
 
+          {/* Suppliers Table */}
           <div className="table-container shadow-box">
-            <table className="supplier-table">
+            <table className="inventory-table">
               <thead>
                 <tr>
                   <th>Supplier ID</th>
                   <th>Supplier Name</th>
-                  <th>Contact Person</th>
+                  <th>Contact</th>
                   <th>Address</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  <th style={{ textAlign: 'center' }}>Action</th> {/* NEW COLUMN */}
                 </tr>
               </thead>
               <tbody>
-                {filteredSuppliers.length > 0 ? (
-                  filteredSuppliers.map((s) => (
-                    <tr key={s.supplier_id} style={{ zIndex: openMenuId === s.supplier_id ? 10 : 1, position: 'relative' }}>
-                      <td>{s.supplier_id}</td>
-                      <td style={{ fontWeight: 'bold' }}>{s.supplier_name}</td>
-                      <td>{s.contact}</td>
-                      <td>{s.address}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div className="action-menu-container">
-                          <button 
-                            className="dots-btn" 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setOpenMenuId(openMenuId === s.supplier_id ? null : s.supplier_id); 
-                            }}
-                          >
-                            ooo
-                          </button>
-                          {openMenuId === s.supplier_id && (
-                            <div className="action-dropdown" style={{ right: '0', top: '100%' }}>
-                              <div onClick={() => openRestockModal(s)} style={{ color: '#27ae60', fontWeight: 'bold' }}>RECEIVE STOCK</div>
-                              <div>EDIT</div>
+                {suppliers.length > 0 ? (
+                  suppliers.map((sup) => (
+                    <tr key={sup.supplier_id}>
+                      <td>{sup.supplier_id}</td>
+                      <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>{sup.supplier_name}</td>
+                      <td>{sup.contact}</td>
+                      <td>{sup.address}</td>
+                      
+                      {/* NEW ACTION CELL */}
+                      <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
+                        <button 
+                          onClick={() => setActiveDropdown(activeDropdown === sup.supplier_id ? null : sup.supplier_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', color: '#7f8c8d' }}
+                        >
+                          ⋮
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {activeDropdown === sup.supplier_id && (
+                          <>
+                            <div 
+                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} 
+                              onClick={() => setActiveDropdown(null)}
+                            />
+                            <div style={{
+                              position: 'absolute', right: '40px', top: '25px', background: 'white',
+                              border: '1px solid #e0e0e0', borderRadius: '6px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                              zIndex: 10, display: 'flex', flexDirection: 'column', width: '120px', overflow: 'hidden'
+                            }}>
+                              <button 
+                                onClick={() => openEditModal(sup)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2980b9' }}
+                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button 
+                                onClick={() => openArchiveModal(sup)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', color: '#e74c3c' }}
+                                onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                📦 Archive
+                              </button>
                             </div>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No suppliers found. Add one above!</td>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No suppliers found. Add them directly in Supabase for now!</td>
                   </tr>
                 )}
               </tbody>
@@ -253,124 +252,145 @@ const Suppliers = () => {
         </main>
       </div>
 
-      {/* --- ADD SUPPLIER MODAL --- */}
-      {showModal && (
+      {/* --- MODAL: RECEIVE STOCK DELIVERY --- */}
+      {showReceiveModal && (
         <div className="modal-overlay">
-          <div className="add-user-modal"> 
-            <div className="modal-header-red">
-              <h3>Add Supplier</h3>
-              <button className="close-x" onClick={handleCancelAttempt}>✖</button>
+          <div className="add-user-modal">
+            <div className="modal-header-red" style={{ backgroundColor: '#d3f2f' }}>
+              <h3>Log Incoming Delivery</h3>
+              <button className="close-x" onClick={() => setShowReceiveModal(false)}>✖</button>
             </div>
-            <form onSubmit={handleSaveSupplier} className="modal-form">
+            <form className="modal-form" onSubmit={handleReceiveStock}>
               <div className="form-row">
-                <div className="form-group">
-                  <label>Supplier Name</label>
-                  <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Select Supplier:</label>
+                  <select 
+                    required 
+                    value={receiveData.supplier_name}
+                    onChange={(e) => setReceiveData({...receiveData, supplier_name: e.target.value})}
+                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  >
+                    <option value="">-- Choose a Supplier --</option>
+                    {suppliers.map(sup => (
+                      <option key={sup.supplier_id} value={sup.supplier_name}>{sup.supplier_name}</option>
+                    ))}
+                    <option value="Walk-in / Unknown">Walk-in / Unknown</option>
+                  </select>
                 </div>
-                <div className="form-group">
-                  <label>Contact Person</label>
-                  <input type="text" required value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Select Product:</label>
+                  <select 
+                    required 
+                    value={receiveData.product_id}
+                    onChange={(e) => setReceiveData({...receiveData, product_id: e.target.value})}
+                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  >
+                    <option value="">-- Choose a Product --</option>
+                    {products.map(prod => (
+                      <option key={prod.product_id} value={prod.product_id}>
+                        ID: {prod.product_id} - {prod.product_name} (Current Stock: {prod.stock})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Quantity Received:</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    placeholder="e.g. 50"
+                    required
+                    value={receiveData.qty_received}
+                    onChange={(e) => setReceiveData({...receiveData, qty_received: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#d3f2f' }} disabled={isLoading}>
+                  {isLoading ? 'Processing...' : 'Receive Delivery'}
+                </button>
+                <button type="button" className="cancel-btn" onClick={() => setShowReceiveModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: EDIT SUPPLIER --- */}
+      {showEditModal && selectedSupplier && (
+        <div className="modal-overlay">
+          <div className="add-user-modal">
+            <div className="modal-header-red" style={{ backgroundColor: '#2980b9' }}>
+              <h3>✏️ Edit Supplier Details</h3>
+              <button className="close-x" onClick={() => setShowEditModal(false)}>✖</button>
+            </div>
+            <form className="modal-form" onSubmit={handleEditSubmit}>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Supplier Name:</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editData.supplier_name}
+                    onChange={(e) => setEditData({...editData, supplier_name: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ width: '100%' }}>
-                  <label>Address</label>
-                  <input type="text" required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                  <label>Contact Number:</label>
+                  <input 
+                    type="text" 
+                    value={editData.contact}
+                    onChange={(e) => setEditData({...editData, contact: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Address:</label>
+                  <input 
+                    type="text" 
+                    value={editData.address}
+                    onChange={(e) => setEditData({...editData, address: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="submit" className="save-btn">Save</button>
-                <button type="button" className="cancel-btn" onClick={handleCancelAttempt}>Cancel</button>
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#2980b9' }}>Save Changes</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- RESTOCK MODAL --- */}
-      {showRestockModal && (
-        <div className="modal-overlay">
-          <div className="add-user-modal" style={{ maxWidth: '650px' }}>
-            <div className="modal-header-red">
-              <h3>Receive Delivery from {selectedSupplier?.supplier_name}</h3>
-              <button className="close-x" onClick={closeFormCompletely}>✖</button>
-            </div>
-            <form onSubmit={handleRestockSubmit} className="modal-form">
-              
-              <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '10px' }}>
-                {restockItems.map((item, index) => (
-                  <div className="form-row" key={index} style={{ alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                    
-                    <div className="form-group" style={{ flex: 2 }}>
-                      <label>Product Delivered</label>
-                      <select 
-                        required 
-                        value={item.product_id}
-                        onChange={(e) => handleRestockItemChange(index, 'product_id', e.target.value)}
-                      >
-                        <option value="">Select a Product...</option>
-                        {inventoryProducts.map(p => (
-                          <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-group" style={{ flex: 1, marginLeft: '10px' }}>
-                      <label>Qty Received</label>
-                      <input 
-                        type="number" 
-                        required 
-                        min="1"
-                        value={item.quantity} 
-                        onChange={(e) => handleRestockItemChange(index, 'quantity', parseInt(e.target.value) || 0)} 
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ flex: 1, marginLeft: '10px' }}>
-                      <label>Unit Cost (₱)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        min="0"
-                        step="0.01"
-                        value={item.unit_cost} 
-                        onChange={(e) => handleRestockItemChange(index, 'unit_cost', parseFloat(e.target.value) || 0)} 
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
-                <button type="button" onClick={handleAddRestockRow} style={{ background: '#ecf0f1', color: '#2c3e50', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  + Add Another Item
-                </button>
-                
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#c0392b' }}>
-                  Total: ₱{restockItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0).toFixed(2)}
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="submit" className="save-btn">Confirm Delivery</button>
-                <button type="button" className="cancel-btn" onClick={closeFormCompletely}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- DISCARD CHANGES MODAL --- */}
-      {showDiscardModal && (
+      {/* --- MODAL: ARCHIVE CONFIRMATION --- */}
+      {showArchiveModal && selectedSupplier && (
         <div className="modal-overlay alert-overlay">
-          <div className="delete-confirm-modal">
-            <div className="modal-header-red"><h3>Discard Changes?</h3></div>
-            <div className="delete-modal-body">
-              <p>Are you sure you want to quit editing?</p>
-              <div className="delete-modal-footer">
-                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard Changes</button>
-                <button className="cancel-delete-btn" onClick={() => setShowDiscardModal(false)}>Keep Editing</button>
-              </div>
+          <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
+            <h3 style={{ color: '#e74c3c', marginTop: 0 }}>📦 Archive Supplier?</h3>
+            <p style={{ color: '#34495e', marginBottom: '20px' }}>
+              Are you sure you want to archive <strong>{selectedSupplier.supplier_name}</strong>? They will no longer appear in your active dropdowns for receiving stock.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+              <button 
+                onClick={handleArchiveSubmit} 
+                style={{ padding: '10px 20px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                Yes, Archive
+              </button>
+              <button 
+                onClick={() => setShowArchiveModal(false)} 
+                style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>

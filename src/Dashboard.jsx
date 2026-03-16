@@ -7,7 +7,7 @@ import logo from './assets/logotrans.png';
 
 
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -68,9 +68,9 @@ const Dashboard = () => {
         <main className="dashboard-content">
           <header className="main-header">
   <div className="title-area">
-    <h2><span className="icon">📊</span> Business Dashboard</h2>
+    <h2>Business Dashboard</h2>
   </div>
-  <TopHeader userData={dashboardData} onUpdateSuccess={fetchDashboardData} />
+  <TopHeader />
 </header>
 
           <hr className="divider" style={{ marginBottom: '20px' }} />

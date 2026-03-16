@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import TopHeader from './TopHeader';
+// 1. IMPORT THE BATCH REPORT
+import BatchReport from './BatchReport'; 
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -19,10 +22,15 @@ const Inventory = () => {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
-  // Form Data (Matches your actual database schema now!)
+  // Form Data 
   const [formData, setFormData] = useState({
     name: '', category: '', retail: 0
   });
+
+  // --- NEW STATES FOR ACTION MENU & BATCH REPORT ---
+  const [activeDropdown, setActiveDropdown] = useState(null); // Tracks which row's ellipsis is clicked
+  const [showBatchReport, setShowBatchReport] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null); // Holds data for the Batch Report
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -35,7 +43,7 @@ const Inventory = () => {
   // --- API CALLS ---
   const fetchInventory = async () => {
     try {
-      const response = await fetch('${API_URL}/api/inventory');
+      const response = await fetch(`${API_URL}/api/inventory`);
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -47,7 +55,7 @@ const Inventory = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('${API_URL}/api/product', {
+      const response = await fetch(`${API_URL}/api/product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -55,7 +63,7 @@ const Inventory = () => {
 
       if (response.ok) {
         triggerToast("Product profile created successfully!");
-        fetchInventory(); // Refresh the list from the database
+        fetchInventory(); 
         closeFormCompletely();
       } else {
         alert("Failed to save product. Check the Flask terminal.");
@@ -80,6 +88,25 @@ const Inventory = () => {
     setShowDiscardModal(false);
     setShowAddModal(false);
     setFormData({ name: '', category: '', retail: 0 });
+  };
+
+  const openBatchReport = (product) => {
+    // Translate Inventory data format into what BatchReport.jsx expects
+    setSelectedProduct({
+      id: product.product_id,
+      name: product.product_name,
+      category: product.category,
+      qty: product.stock,
+      retail: product.unit_price,
+      unit: 'pcs' // Fallback since unit isn't in your table view yet
+    });
+    setShowBatchReport(true);
+    setActiveDropdown(null); // Close the dropdown menu
+  };
+
+  const handleArchive = (productId) => {
+    alert(`Archive functionality for Product ID: ${productId} coming soon!`);
+    setActiveDropdown(null);
   };
 
   return (
@@ -109,14 +136,9 @@ const Inventory = () => {
         <main className="dashboard-content">
           <header className="main-header">
             <div className="title-area">
-              <h2><span className="icon">📂</span> Inventory Management</h2>
+              <h2>Inventory Management</h2>
             </div>
-            <div className="admin-info">
-              <p className="real-time-date">
-                Date: {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}
-              </p>
-              <p className="welcome-text">Welcome, Admin</p>
-            </div>
+            <TopHeader />
           </header>
 
           <hr className="divider" />
@@ -125,7 +147,6 @@ const Inventory = () => {
           <div className="inventory-controls">
             <div className="search-wrapper">
               <input type="text" placeholder="Search....." className="search-input" />
-              <span className="search-icon">🔍</span>
             </div>
             <div className="filter-group">
               <select className="filter-select"><option>Filter by</option></select>
@@ -146,6 +167,7 @@ const Inventory = () => {
                   <th>Category</th>
                   <th>Stock Qty</th>
                   <th>Unit Price</th>
+                  <th style={{ textAlign: 'center' }}>Action</th> {/* NEW COLUMN */}
                 </tr>
               </thead>
               <tbody>
@@ -164,11 +186,55 @@ const Inventory = () => {
                         </span>
                       </td>
                       <td>₱{product.unit_price}</td>
+                      
+                      {/* NEW ACTION CELL */}
+                      <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
+                        <button 
+                          onClick={() => setActiveDropdown(activeDropdown === product.product_id ? null : product.product_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', color: '#7f8c8d' }}
+                        >
+                          ⋮
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {activeDropdown === product.product_id && (
+                          <>
+                            {/* Invisible background overlay to close dropdown when clicking outside */}
+                            <div 
+                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} 
+                              onClick={() => setActiveDropdown(null)}
+                            />
+                            
+                            <div style={{
+                              position: 'absolute', right: '40px', top: '25px', background: 'white',
+                              border: '1px solid #e0e0e0', borderRadius: '6px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                              zIndex: 10, display: 'flex', flexDirection: 'column', width: '120px', overflow: 'hidden'
+                            }}>
+                              <button 
+                                onClick={() => openBatchReport(product)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2c3e50' }}
+                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                📋 Batches
+                              </button>
+                              <button 
+                                onClick={() => handleArchive(product.product_id)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', color: '#e74c3c' }}
+                                onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                📦 Archive
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
                   </tr>
                 )}
               </tbody>
@@ -176,6 +242,15 @@ const Inventory = () => {
           </div>
         </main>
       </div>
+
+      {/* --- RENDER THE BATCH REPORT IF OPEN --- */}
+      {showBatchReport && selectedProduct && (
+        <BatchReport 
+          activeProduct={selectedProduct} 
+          currentTime={currentTime} 
+          onClose={() => setShowBatchReport(false)} 
+        />
+      )}
 
       {/* --- MODAL: ADD PRODUCT --- */}
       {showAddModal && (

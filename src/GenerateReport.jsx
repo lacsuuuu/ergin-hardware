@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import TopHeader from './TopHeader';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -87,38 +88,8 @@ const GenerateReport = () => {
         <main className="dashboard-content" style={{ display: 'flex', flexDirection: 'column' }}>
           
           <header className="main-header no-print">
-            <div className="title-area"><h2><span className="icon">📈</span> Generate Reports</h2></div>
-            <div className="admin-info" style={{ textAlign: 'right' }}>
-    <p className="real-time-date">
-      {currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}
-    </p>
-    {/* Dynamic Role Display */}
-    <p className="welcome-text">
-      Welcome, <span style={{ fontWeight: 'bold', color: '#2980b9' }}>{dashboardData.user_role || 'Admin'}</span>
-    </p>
-    {/* New Update Button */}
-    <button 
-      className="update-info-btn" 
-      onClick={() => setIsModalOpen(true)} 
-      style={{
-      marginTop: '5px',
-      padding: '6px 12px',
-      backgroundColor: '#2c3e50',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '5px',
-      float: 'right'
-  }}
->
-  ⚙️ Update Information
-</button>
-  </div>
+            <div className="title-area"><h2>Generate Reports</h2></div>
+            <TopHeader />
           </header>
 
           <hr className="divider no-print" />
@@ -149,7 +120,7 @@ const GenerateReport = () => {
               </div>
               <button 
                 type="submit" 
-                style={{ background: '#27ae60', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '42px' }}
+                style={{ background: '#d32f2f', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '42px' }}
                 disabled={isLoading}
               >
                 {isLoading ? 'Generating...' : 'Generate Report'}
@@ -169,8 +140,8 @@ const GenerateReport = () => {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="no-print" style={{ marginBottom: '15px' }}>
-                    <button onClick={() => window.print()} style={{ background: '#2c3e50', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                      🖨️ Print Report
+                    <button onClick={() => window.print()} style={{ background: '#ac372f', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      Print Report
                     </button>
                   </div>
                   <strong>Period:</strong> {reportData.start_date} to {reportData.end_date}<br/>
@@ -183,9 +154,9 @@ const GenerateReport = () => {
                   <div style={{ fontSize: '12px', color: '#7f8c8d', fontWeight: 'bold' }}>TOTAL TRANSACTIONS</div>
                   <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2c3e50' }}>{reportData.total_transactions}</div>
                 </div>
-                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '4px', flex: 1, borderLeft: '4px solid #27ae60' }}>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '4px', flex: 1, borderLeft: '4px solid #d3f2f' }}>
                   <div style={{ fontSize: '12px', color: '#7f8c8d', fontWeight: 'bold' }}>TOTAL REVENUE</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>₱ {reportData.total_revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d3f2f' }}>₱ {reportData.total_revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>
               </div>
 

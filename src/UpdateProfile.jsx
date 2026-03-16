@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
@@ -165,7 +165,7 @@ const UpdateProfileModal = ({ isOpen, onClose, userData, onUpdateSuccess }) => {
 
             <div style={styles.inputGroup}>
               <label style={{ ...styles.label, color: '#7f8c8d' }}>System Role</label>
-              <div style={styles.roleBadge}>🔒 {formData.role}</div>
+              <div style={styles.roleBadge}> {formData.role}</div>
             </div>
           </div>
 
