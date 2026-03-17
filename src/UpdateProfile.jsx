@@ -108,75 +108,83 @@ const UpdateProfileModal = ({ isOpen, onClose, userData, onUpdateSuccess }) => {
   return (
     <div style={styles.overlay}>
       <div className="shadow-box" style={styles.modalBox}>
-        <h3 style={styles.headerTitle}>Update User Profile</h3>
         
-        {message.text && (
-          <div style={{ ...styles.messageBox, backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da', color: message.type === 'success' ? '#155724' : '#721c24' }}>
-            {message.text}
-          </div>
-        )}
+        {/* --- NEW HEADER BLOCK --- */}
+        <div style={styles.headerContainer}>
+          <h3 style={styles.headerTitle}>Update User Profile</h3>
+          <button style={styles.closeIcon} onClick={onClose} aria-label="Close">
+            ✖
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} style={styles.formContainer}>
-          
-          <div style={styles.grid}>
-            {/* Column 1 */}
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Full Name</label>
-              <input type="text" name="name" required value={formData.name} onChange={handleChange} style={styles.input} />
+        {/* --- NEW BODY WRAPPER FOR PADDING --- */}
+        <div style={styles.bodyContainer}>
+          {message.text && (
+            <div style={{ ...styles.messageBox, backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da', color: message.type === 'success' ? '#155724' : '#721c24' }}>
+              {message.text}
             </div>
-            
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Email Address</label>
-              <input type="email" name="email" required value={formData.email} onChange={handleChange} style={styles.input} />
+          )}
+
+          <form onSubmit={handleSubmit} style={styles.formContainer}>
+            <div style={styles.grid}>
+              {/* Column 1 */}
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Full Name</label>
+                <input type="text" name="name" required value={formData.name} onChange={handleChange} style={styles.input} />
+              </div>
+              
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Email Address</label>
+                <input type="email" name="email" required value={formData.email} onChange={handleChange} style={styles.input} />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Contact Number</label>
+                <input type="text" name="contact" value={formData.contact} onChange={handleChange} style={styles.input} placeholder="e.g. 09123456789" />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Address</label>
+                <input type="text" name="address" value={formData.address} onChange={handleChange} style={styles.input} />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Birthday</label>
+                <input type="date" name="birthday" value={formData.birthday} onChange={handleChange} style={styles.input} />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={{ ...styles.label, color: '#7f8c8d' }}>Age</label>
+                <input 
+                  type="number" 
+                  name="age" 
+                  value={formData.age} 
+                  readOnly 
+                  style={{ ...styles.input, backgroundColor: '#f9f9f9', color: '#7f8c8d', cursor: 'not-allowed' }} 
+                  placeholder="Auto-calculated"
+                />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>New Password</label>
+                <input type="password" name="password" value={formData.password} onChange={handleChange} style={styles.input} placeholder="Leave blank to keep current" />
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={{ ...styles.label, color: '#7f8c8d' }}>System Role</label>
+                <div style={styles.roleBadge}> {formData.role}</div>
+              </div>
             </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Contact Number</label>
-              <input type="text" name="contact" value={formData.contact} onChange={handleChange} style={styles.input} placeholder="e.g. 09123456789" />
+            <div style={styles.buttonContainer}>
+              <button type="button" onClick={onClose} disabled={isLoading} style={styles.cancelBtn}>Cancel</button>
+              <button type="submit" disabled={isLoading} style={styles.saveBtn}>
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Address</label>
-              <input type="text" name="address" value={formData.address} onChange={handleChange} style={styles.input} />
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Birthday</label>
-              <input type="date" name="birthday" value={formData.birthday} onChange={handleChange} style={styles.input} />
-            </div>
-
-            {/* --- NEW: Locked, Auto-calculated Age Field --- */}
-            <div style={styles.inputGroup}>
-              <label style={{ ...styles.label, color: '#7f8c8d' }}>Age</label>
-              <input 
-                type="number" 
-                name="age" 
-                value={formData.age} 
-                readOnly 
-                style={{ ...styles.input, backgroundColor: '#f9f9f9', color: '#7f8c8d', cursor: 'not-allowed' }} 
-                placeholder="Auto-calculated"
-              />
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>New Password</label>
-              <input type="password" name="password" value={formData.password} onChange={handleChange} style={styles.input} placeholder="Leave blank to keep current" />
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={{ ...styles.label, color: '#7f8c8d' }}>System Role</label>
-              <div style={styles.roleBadge}> {formData.role}</div>
-            </div>
-          </div>
-
-          <div style={styles.buttonContainer}>
-            <button type="button" onClick={onClose} disabled={isLoading} style={styles.cancelBtn}>Cancel</button>
-            <button type="submit" disabled={isLoading} style={styles.saveBtn}>
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-
-        </form>
+          </form>
+        </div>
+        
       </div>
     </div>
   );
@@ -190,12 +198,41 @@ const styles = {
     backdropFilter: 'blur(2px)' 
   },
   modalBox: {
-    background: 'white', padding: '30px', borderRadius: '12px',
+    background: 'white', 
+    borderRadius: '12px',
     width: '600px', 
-    color: '#333', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+    color: '#333', 
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+    overflow: 'hidden'
+  },
+  headerContainer: {
+    backgroundColor: '#d32f2f',
+    padding: '15px 20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
   headerTitle: {
-    marginTop: 0, borderBottom: '2px solid #f1f2f6', paddingBottom: '12px', fontSize: '20px'
+    margin: 0, 
+    fontSize: '20px',
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  closeIcon: {
+    background: '#f1f2f6',
+    color: '#333',
+    border: '1px solid #bdc3c7',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    padding: '4px 8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  bodyContainer: {
+    padding: '30px' // We moved the padding here so the form stays centered
   },
   messageBox: {
     padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '13px', textAlign: 'center'
@@ -228,7 +265,7 @@ const styles = {
     padding: '10px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: '#ecf0f1', color: '#333', fontWeight: 'bold'
   },
   saveBtn: {
-    padding: '10px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: '#2980b9', color: 'white', fontWeight: 'bold'
+    padding: '10px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: '#d32f2f', color: 'white', fontWeight: 'bold'
   }
 };
 

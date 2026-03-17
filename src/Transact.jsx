@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -23,9 +24,9 @@ const Transact = () => {
 
   // --- MODAL STATES ---
   const [showNewClientModal, setShowNewClientModal] = useState(false);
-  const [newClientData, setNewClientData] = useState({ name: '', address: '', contact: '', business_style: '', tin: '' });
+  const [newClientData, setNewClientData] = useState({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   
-  const [invoiceData, setInvoiceData] = useState(null); // Holds data for the printable receipt
+  const [invoiceData, setInvoiceData] = useState(null); 
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -69,18 +70,20 @@ const Transact = () => {
         fetchClients(); 
         setSelectedClient(newId); 
         setShowNewClientModal(false);
-        setNewClientData({ name: '', address: '', contact: '', business_style: '', tin: '' });
+        setNewClientData({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
       }
     } catch (error) { console.error("Error quick-adding client:", error); }
   };
 
-  // --- CART & BARCODE LOGIC ---
+  // --- CART LOGIC ---
   const addToCart = (product) => {
     if (product.stock <= 0) {
       triggerToast("Out of stock!", "error");
       return;
     }
 
+    // NEW: Always pull the selling_price!
+    const productPrice = Number(product.selling_price || 0);
     const existingItem = cart.find(item => item.product_id === product.product_id);
     
     if (existingItem) {
@@ -90,22 +93,65 @@ const Transact = () => {
       }
       setCart(cart.map(item => 
         item.product_id === product.product_id 
-          ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.price }
+          ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * productPrice }
           : item
       ));
     } else {
       setCart([...cart, {
         product_id: product.product_id,
         name: product.product_name,
-        price: product.unit_price,
+        price: productPrice,
         quantity: 1,
-        subtotal: product.unit_price
+        subtotal: productPrice
       }]);
     }
   };
 
   const removeFromCart = (productId) => {
     setCart(cart.filter(item => item.product_id !== productId));
+  };
+
+  const handleCartAdd = (productId) => {
+    const product = inventory.find(p => p.product_id === productId);
+    setCart(cart.map(item => {
+      if (item.product_id === productId) {
+        const newQty = item.quantity + 1;
+        if (product && newQty > product.stock) {
+          triggerToast("Not enough stock available!", "error");
+          return item;
+        }
+        return { ...item, quantity: newQty, subtotal: newQty * item.price };
+      }
+      return item;
+    }));
+  };
+
+  const handleCartMinus = (productId) => {
+    setCart(cart.map(item => {
+      if (item.product_id === productId && item.quantity > 1) {
+        const newQty = item.quantity - 1;
+        return { ...item, quantity: newQty, subtotal: newQty * item.price };
+      }
+      return item;
+    }));
+  };
+
+  const handleCartCustomQty = (productId, value) => {
+    const product = inventory.find(p => p.product_id === productId);
+    let newQty = parseInt(value);
+
+    if (isNaN(newQty) || newQty < 1) newQty = 1;
+
+    setCart(cart.map(item => {
+      if (item.product_id === productId) {
+        if (product && newQty > product.stock) {
+          triggerToast(`Only ${product.stock} available!`, "error");
+          newQty = product.stock; 
+        }
+        return { ...item, quantity: newQty, subtotal: newQty * item.price };
+      }
+      return item;
+    }));
   };
 
   const handleBarcodeScan = (e) => {
@@ -193,7 +239,7 @@ const Transact = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         <main className="dashboard-content no-print" style={{ display: 'flex', gap: '20px' }}>
@@ -214,7 +260,7 @@ const Transact = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleBarcodeScan}
-                style={{ width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid #bdc3c7', fontSize: '16px', fontWeight: 'bold' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid #d32f2f', fontSize: '16px', outline: 'none' }}
                 autoFocus
               />
             </div>
@@ -235,7 +281,12 @@ const Transact = () => {
                     <tr key={p.product_id}>
                       <td>{p.product_id}</td>
                       <td style={{ fontWeight: 'bold' }}>{p.product_name}</td>
-                      <td>₱{p.unit_price}</td>
+                      
+                      {/* NEW: Displays selling_price with 2 decimals */}
+                      <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                        ₱{Number(p.selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </td>
+                      
                       <td style={{ color: p.stock > 0 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }}>{p.stock}</td>
                       <td style={{ textAlign: 'center' }}>
                         <button 
@@ -289,12 +340,31 @@ const Transact = () => {
                 cart.map((item, index) => (
                   <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                     <div>
-                      <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                      <div style={{ fontSize: '12px', color: '#7f8c8d' }}>{item.quantity} x ₱{item.price}</div>
+                      <div style={{ fontWeight: 'bold', color: '#000' }}>{item.name}</div>
+                      <div style={{ fontSize: '12px', color: '#7f8c8d' }}>
+                        ₱{Number(item.price).toLocaleString(undefined, {minimumFractionDigits: 2})} each
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontWeight: 'bold' }}>₱{item.subtotal}</span>
-                      <button onClick={() => removeFromCart(item.product_id)} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '16px' }}>✖</button>
+                    
+                    {/* NEW: The + / - Custom Quantity Buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#f1f2f6', border: '1px solid #bdc3c7', borderRadius: '4px', overflow: 'hidden' }}>
+                        <button onClick={() => handleCartMinus(item.product_id)} style={{ padding: '4px 10px', background: '#e0e0e0', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>-</button>
+                        <input 
+                          type="number" 
+                          value={item.quantity} 
+                          onChange={(e) => handleCartCustomQty(item.product_id, e.target.value)}
+                          style={{ width: '40px', textAlign: 'center', border: 'none', padding: '4px 0', outline: 'none', background: 'white', fontWeight: 'bold' }}
+                          min="1"
+                        />
+                        <button onClick={() => handleCartAdd(item.product_id)} style={{ padding: '4px 10px', background: '#e0e0e0', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>+</button>
+                      </div>
+                      
+                      <span style={{ fontWeight: 'bold', minWidth: '70px', textAlign: 'right', color: '#000' }}>
+                        ₱{item.subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </span>
+                      
+                      <button onClick={() => removeFromCart(item.product_id)} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '18px', padding: '0' }}>✖</button>
                     </div>
                   </div>
                 ))
@@ -302,9 +372,9 @@ const Transact = () => {
             </div>
 
             <div style={{ borderTop: '2px solid #eee', paddingTop: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#2c3e50' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#000' }}>
                 <span>Total:</span>
-                <span>₱{cartTotal.toFixed(2)}</span>
+                <span>₱{cartTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
               </div>
               
               <button 
@@ -315,7 +385,6 @@ const Transact = () => {
                 Complete Checkout
               </button>
             </div>
-
           </div>
         </main>
       </div>
@@ -326,7 +395,12 @@ const Transact = () => {
           <div className="add-user-modal" style={{ maxWidth: '400px' }}>
             <div className="modal-header-red">
               <h3>Quick Add Client</h3>
-              <button className="close-x" onClick={() => setShowNewClientModal(false)}>✖</button>
+              <button 
+                style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                className="close-x" 
+                onClick={() => setShowNewClientModal(false)}>
+                ✖
+              </button>
             </div>
             <form onSubmit={handleQuickAddClient} className="modal-form">
               <div className="form-group">
@@ -339,7 +413,7 @@ const Transact = () => {
               </div>
               <div className="form-group">
                 <label>Email</label>
-                <input type="text" required value={newClientData.email} onChange={(e) => setNewClientData({...newClientData, email: e.target.value})} />
+                <input type="text" value={newClientData.email} onChange={(e) => setNewClientData({...newClientData, email: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Address</label>
@@ -347,11 +421,11 @@ const Transact = () => {
               </div>
               <div className="form-group">
                 <label>Business Type</label>
-                <input type="text" required value={newClientData.business_style} onChange={(e) => setNewClientData({...newClientData, business_style: e.target.value})} />
+                <input type="text" value={newClientData.business_style} onChange={(e) => setNewClientData({...newClientData, business_style: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>TIN</label>
-                <input type="text" required value={newClientData.tin} onChange={(e) => setNewClientData({...newClientData, tin: e.target.value})} />
+                <input type="text" value={newClientData.tin} onChange={(e) => setNewClientData({...newClientData, tin: e.target.value})} />
               </div>
               <div className="modal-footer">
                 <button type="submit" className="save-btn">Save & Select</button>
@@ -392,17 +466,12 @@ const Transact = () => {
             `}
           </style>
 
-          {/* FIX: Removed 'no-print' from this wrapper! */}
           <div className="modal-overlay" style={{ zIndex: 9999 }}>
             <div className="add-user-modal" style={{ maxWidth: '800px', padding: '0', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
               
-              {/* --- EXACT 1:1 INVOICE DESIGN --- */}
               <div id="printable-invoice" style={{ padding: '40px', background: 'white', color: 'black', fontFamily: 'Arial, sans-serif' }}>
                 
-                {/* Header Section */}
                 <div style={{ position: 'relative', textAlign: 'center', marginBottom: '20px' }}>
-                  
-                  {/* Top Right Info */}
                   <div style={{ position: 'absolute', top: 0, right: 0, textAlign: 'right', fontSize: '12px' }}>
                     <div>Invoice</div>
                     <div>Invoice No: {invoiceData.sales_id}</div>
@@ -419,7 +488,6 @@ const Transact = () => {
                   <h2 style={{ margin: '15px 0 5px 0', fontSize: '20px', fontWeight: 'bold', letterSpacing: '1px' }}>CHARGE SALES INVOICE</h2>
                 </div>
 
-                {/* Customer Details Section */}
                 <div style={{ fontSize: '13px', lineHeight: '1.8', marginBottom: '20px' }}>
                   <div style={{ display: 'flex' }}>
                     <span style={{ width: '80px' }}>Charged to:</span>
@@ -439,7 +507,6 @@ const Transact = () => {
                   </div>
                 </div>
 
-                {/* Products Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', textAlign: 'left' }}>
@@ -456,19 +523,18 @@ const Transact = () => {
                         <td style={{ padding: '8px 0' }}>{item.quantity}</td>
                         <td style={{ padding: '8px 0' }}>pcs</td>
                         <td style={{ padding: '8px 0' }}>{item.name}</td>
-                        <td style={{ padding: '8px 0', textAlign: 'center' }}>{item.price}</td>
-                        <td style={{ padding: '8px 0', textAlign: 'right' }}>₱{item.subtotal}</td>
+                        <td style={{ padding: '8px 0', textAlign: 'center' }}>₱{Number(item.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td style={{ padding: '8px 0', textAlign: 'right' }}>₱{Number(item.subtotal).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                {/* Subtotals Section */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '13px', marginBottom: '20px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
                   <div style={{ width: '250px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                       <span>SubTotal:</span>
-                      <span>₱ {invoiceData.total.toFixed(2)}</span>
+                      <span>₱ {invoiceData.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                       <span>Additional Charge:</span>
@@ -476,14 +542,13 @@ const Transact = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #ccc', paddingTop: '5px' }}>
                       <span>Total:</span>
-                      <span>₱ {invoiceData.total.toFixed(2)}</span>
+                      <span>₱ {invoiceData.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div style={{ borderBottom: '1px solid #ccc', marginBottom: '20px' }}></div>
 
-                {/* Legal & Signatures */}
                 <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
                   <p style={{ textDecoration: 'underline', color: '#0056b3', marginBottom: '15px' }}>
                     Received the above in good condition. Parties expressly submit themselves to the jurisdiction of the Courts of Bacolod City, any legal action arising out of this transaction and to pay 25% attorney's fees fine of suit. Interest of 2% per month will be charged on overdue accounts.
@@ -505,9 +570,7 @@ const Transact = () => {
                   </div>
                 </div>
               </div>
-              {/* --- END OF PRINTABLE AREA --- */}
 
-              {/* Action Buttons (These hide when printing due to the "no-print" class!) */}
               <div className="modal-footer no-print" style={{ background: '#f9f9f9', padding: '15px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button 
                   onClick={() => setInvoiceData(null)} 

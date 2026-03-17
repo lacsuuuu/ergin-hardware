@@ -12,7 +12,7 @@ import Clients from './Clients.jsx';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/sales-record" element={<SalesRecord />} />

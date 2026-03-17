@@ -32,7 +32,7 @@ const TopHeader = ({ userData, onUpdateSuccess }) => {
         style={{
           marginTop: '5px',
           padding: '6px 12px',
-          backgroundColor: '#ac372f',
+          backgroundColor: '#d32f2f',
           color: 'white',
           border: 'none',
           borderRadius: '4px',

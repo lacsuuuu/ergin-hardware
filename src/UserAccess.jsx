@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -92,7 +93,7 @@ const UserAccess = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}
@@ -168,7 +169,21 @@ const UserAccess = () => {
           <div className="add-user-modal" style={{ maxWidth: '600px' }}>
             <div className="modal-header-red">
               <h3>Create Staff Account</h3>
-              <button className="close-x" onClick={() => setShowModal(false)}>✖</button>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }} className="close-x" onClick={() => setShowModal(false)}>
+                        ✖
+                      </button>
             </div>
             <form onSubmit={handleSaveUser} className="modal-form">
               

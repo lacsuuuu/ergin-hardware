@@ -48,7 +48,7 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
           .company-name { margin: 0 0 5px 0; font-size: 22px; color: #2c3e50; font-weight: 800; }
           .company-info { margin: 2px 0; font-size: 14px; color: #555; }
           .company-info-small { margin: 2px 0; font-size: 12px; color: #7f8c8d; }
-          .document-main-title { margin: 20px 0 0 0; font-size: 24px; letter-spacing: 2px; color: #2980b9; font-weight: bold; }
+          .document-main-title { margin: 20px 0 0 0; font-size: 24px; letter-spacing: 2px; color: #000; font-weight: bold; }
           .receipt-metadata { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 14px; }
           .receipt-metadata p { margin: 5px 0; }
           .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
@@ -57,14 +57,14 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
           .receipt-bottom-grid { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
           .legal-text { font-size: 12px; color: #7f8c8d; }
           .valid-claim { font-weight: bold; color: #e74c3c; letter-spacing: 1px; margin-top: 5px; }
-          .totals-box { background: #f8f9fa; padding: 15px 25px; border-radius: 6px; border-left: 4px solid #27ae60; }
+          .totals-box { background: #f8f9fa; padding: 15px 25px; border-radius: 6px; border-left: 4px solid #d32f2f; }
           .grand-total { font-size: 18px; font-weight: bold; color: #2c3e50; display: flex; gap: 20px; }
           .signature-section { margin-top: 40px; display: flex; justify-content: flex-end; text-align: center; }
           .sig-wrapper .line { width: 200px; border-bottom: 1px solid #333; margin-bottom: 5px; }
           .sig-wrapper p { margin: 2px 0; font-size: 14px; color: #555; }
           .invoice-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-          .print-btn { background: #2980b9; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
-          .print-btn:hover { background: #2471a3; }
+          .print-btn { background: #ac372f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
+          .print-btn:hover { background: #d32f2f; }
           .email-btn { background: #ecf0f1; color: #333; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
           .email-btn:hover { background: #bdc3c7; }
           @media print { .no-print { display: none !important; } .invoice-modal-overlay { position: static; background: white; display: block; } .invoice-paper { width: 100%; box-shadow: none; padding: 0; max-height: none; overflow: visible; } body { margin: 0; padding: 0; background: white; } @page { margin: 1cm; } }
@@ -96,7 +96,7 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
               <div className="meta-right" style={{ textAlign: 'right' }}>
                   <p><strong>Date Generated:</strong> {currentTime.toLocaleDateString()}</p>
                   <p><strong>Current Total Stock:</strong> {activeProduct.qty} {activeProduct.unit}</p>
-                  <p><strong>Retail Price:</strong> ₱{activeProduct.retail.toLocaleString()}</p>
+                  <p><strong>Retail Price (Cost):</strong> ₱{Number(activeProduct.retail || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
               </div>
           </div>
 
@@ -131,7 +131,7 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
                             </div>
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                            ₱{(batch.qty_received * activeProduct.retail).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            ₱{(batch.qty_received * Number(activeProduct.retail || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
                           </td>
                       </tr>
                     ))
@@ -153,11 +153,11 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
               <div className="totals-box">
                   <div className="total-line grand-total">
                       <span>Current Asset Value:</span>
-                      <span>₱{(activeProduct.qty * activeProduct.retail).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span>₱{(Number(activeProduct.qty || 0) * Number(activeProduct.retail || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
               </div>
           </div>
-
+          
           <div className="signature-section">
               <div className="sig-wrapper">
                   <div className="line"></div>
@@ -167,7 +167,7 @@ const BatchReport = ({ activeProduct, currentTime, onClose }) => {
           </div>
 
           <div className="invoice-actions no-print">
-              <button onClick={() => window.print()} className="print-btn">🖨️ Print Batch Report</button>
+              <button onClick={() => window.print()} className="print-btn">Print Batch Report</button>
               <button onClick={onClose} className="email-btn">Close</button>
           </div>
         </div>

@@ -116,7 +116,21 @@ function LoginPage() {
             <div className="error-modal-content">
               <div className="error-header">
                 <span>Invalid Credentials</span>
-                <button className="close-x" onClick={() => setShowError(false)}>✖</button>
+                <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }} className="close-x" onClick={() => setShowError(false)}>
+                        ✖
+                      </button>
               </div>
               <div className="error-body">
                 <p>The name or password you entered is incorrect.</p>

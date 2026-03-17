@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -87,7 +88,7 @@ const SalesRecord = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}
@@ -136,9 +137,9 @@ const SalesRecord = () => {
                     <td style={{ textAlign: 'center' }}>
                       <button 
                         onClick={() => handleViewReceipt(sale.sales_id)}
-                        style={{ background: '#3498db', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                        style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                       >
-                        📄 View Receipt
+                      View Receipt
                       </button>
                     </td>
                   </tr>
@@ -298,9 +299,9 @@ const SalesRecord = () => {
                 </button>
                 <button 
                   onClick={() => window.print()} 
-                  style={{ background: '#f1f2f6', color: '#2c3e50', padding: '10px 20px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                  style={{ background: '#ac372f', color: '#fff', padding: '10px 20px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
-                  🖨️ Print Copy
+                Print Copy
                 </button>
               </div>
 

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
-// 1. IMPORT THE BATCH REPORT
-import BatchReport from './BatchReport'; 
+import BatchReport from './BatchReport';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -19,18 +19,25 @@ const Inventory = () => {
   
   // Modal Toggles
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false); // NEW EDIT MODAL
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('');
   
   // Form Data 
   const [formData, setFormData] = useState({
-    name: '', category: '', retail: 0
+    name: '', category: '', retail_price: 0, selling_price: 0
   });
 
-  // --- NEW STATES FOR ACTION MENU & BATCH REPORT ---
-  const [activeDropdown, setActiveDropdown] = useState(null); // Tracks which row's ellipsis is clicked
+  const [editData, setEditData] = useState({
+    id: '', name: '', category: '', retail_price: 0, selling_price: 0
+  }); // NEW EDIT DATA STATE
+
+  // --- STATES FOR ACTION MENU & BATCH REPORT ---
+  const [activeDropdown, setActiveDropdown] = useState(null); 
   const [showBatchReport, setShowBatchReport] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null); // Holds data for the Batch Report
+  const [selectedProduct, setSelectedProduct] = useState(null); 
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -53,7 +60,6 @@ const Inventory = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
     try {
       const response = await fetch(`${API_URL}/api/product`, {
         method: 'POST',
@@ -73,6 +79,28 @@ const Inventory = () => {
     }
   };
 
+  // --- NEW: EDIT API CALL ---
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_URL}/api/product/${editData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData)
+      });
+
+      if (response.ok) {
+        triggerToast("Product updated successfully!");
+        setShowEditModal(false);
+        fetchInventory();
+      } else {
+        alert("Failed to update product.");
+      }
+    } catch (error) {
+      console.error("Error updating:", error);
+    }
+  };
+
   // --- HELPERS ---
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -87,27 +115,75 @@ const Inventory = () => {
   const closeFormCompletely = () => {
     setShowDiscardModal(false);
     setShowAddModal(false);
-    setFormData({ name: '', category: '', retail: 0 });
+    setFormData({ name: '', category: '', retail_price: 0, selling_price: 0 });
+  };
+
+  const openEditModal = (product) => {
+    setEditData({
+      id: product.product_id,
+      name: product.product_name,
+      category: product.category,
+      retail_price: product.retail_price || 0,
+      selling_price: product.selling_price || 0
+    });
+    setShowEditModal(true);
+    setActiveDropdown(null);
   };
 
   const openBatchReport = (product) => {
-    // Translate Inventory data format into what BatchReport.jsx expects
     setSelectedProduct({
       id: product.product_id,
       name: product.product_name,
       category: product.category,
       qty: product.stock,
-      retail: product.unit_price,
-      unit: 'pcs' // Fallback since unit isn't in your table view yet
+      retail: product.retail_price || 0,
+      unit: 'pcs' 
     });
     setShowBatchReport(true);
-    setActiveDropdown(null); // Close the dropdown menu
+    setActiveDropdown(null); 
   };
 
   const handleArchive = (productId) => {
     alert(`Archive functionality for Product ID: ${productId} coming soon!`);
     setActiveDropdown(null);
   };
+  
+  const filteredProducts = products.filter(product => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+  
+  return (
+      // Checks every single column for a match!
+      product.product_id?.toString().toLowerCase().includes(searchLower) ||
+      product.product_name?.toLowerCase().includes(searchLower) ||
+      product.category?.toLowerCase().includes(searchLower) ||
+      product.stock?.toString().toLowerCase().includes(searchLower) ||
+      product.retail_price?.toString().toLowerCase().includes(searchLower) ||
+      product.selling_price?.toString().toLowerCase().includes(searchLower)
+    );
+  });
+
+  // --- SORTING LOGIC ---
+  // We use [...filteredProducts] to make a safe copy so we don't accidentally mutate the original data
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortOption) {
+      case 'name-asc':
+        return (a.product_name || '').localeCompare(b.product_name || '');
+      case 'name-desc':
+        return (b.product_name || '').localeCompare(a.product_name || '');
+      case 'price-low':
+        return (Number(a.selling_price) || 0) - (Number(b.selling_price) || 0);
+      case 'price-high':
+        return (Number(b.selling_price) || 0) - (Number(a.selling_price) || 0);
+      case 'stock-low':
+        return (Number(a.stock) || 0) - (Number(b.stock) || 0);
+      case 'stock-high':
+        return (Number(b.stock) || 0) - (Number(a.stock) || 0);
+      default:
+        return 0; // If nothing is selected, leave it exactly as it came from the database
+    }
+  });
 
   return (
     <div className="outer-margin-container">
@@ -129,7 +205,7 @@ const Inventory = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}
@@ -142,15 +218,31 @@ const Inventory = () => {
           </header>
 
           <hr className="divider" />
-
           {/* Controls Area */}
           <div className="inventory-controls">
             <div className="search-wrapper">
-              <input type="text" placeholder="Search....." className="search-input" />
+              <input 
+                  type="text" 
+                  placeholder="Search all columns..." 
+                  className="search-input"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <div className="filter-group">
-              <select className="filter-select"><option>Filter by</option></select>
-              <select className="filter-select"><option>Sort by</option></select>
+                  <select 
+                    className="filter-select" 
+                    value={sortOption} 
+                    onChange={(e) => setSortOption(e.target.value)}
+                  >
+                    <option value="">Sort by...</option>
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="price-high">Price (Highest First)</option>
+                    <option value="price-low">Price (Lowest First)</option>
+                    <option value="stock-high">Stock (Highest First)</option>
+                    <option value="stock-low">Stock (Lowest First)</option>
+                  </select>
               <button className="add-product-btn" onClick={() => setShowAddModal(true)}>
                 + Add Product
               </button>
@@ -166,13 +258,14 @@ const Inventory = () => {
                   <th>Product Name</th>
                   <th>Category</th>
                   <th>Stock Qty</th>
-                  <th>Unit Price</th>
-                  <th style={{ textAlign: 'center' }}>Action</th> {/* NEW COLUMN */}
+                  <th>Retail Price</th>
+                  <th>Selling Price</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {products.length > 0 ? (
-                  products.map((product) => (
+                {sortedProducts.length > 0 ? (
+                  sortedProducts.map((product) => (
                     <tr key={product.product_id}>
                       <td>{product.product_id}</td>
                       <td style={{ fontWeight: 'bold' }}>{product.product_name}</td>
@@ -185,9 +278,13 @@ const Inventory = () => {
                           {product.stock}
                         </span>
                       </td>
-                      <td>₱{product.unit_price}</td>
+                      <td style={{ color: '#000' }}>
+                        ₱{Number(product.retail_price || 0).toFixed(2)}
+                      </td>
+                      <td style={{ color: '#000' }}>
+                        ₱{Number(product.selling_price || 0).toFixed(2)}
+                      </td>
                       
-                      {/* NEW ACTION CELL */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
                         <button 
                           onClick={() => setActiveDropdown(activeDropdown === product.product_id ? null : product.product_id)}
@@ -199,7 +296,6 @@ const Inventory = () => {
                         {/* Dropdown Menu */}
                         {activeDropdown === product.product_id && (
                           <>
-                            {/* Invisible background overlay to close dropdown when clicking outside */}
                             <div 
                               style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} 
                               onClick={() => setActiveDropdown(null)}
@@ -211,12 +307,20 @@ const Inventory = () => {
                               zIndex: 10, display: 'flex', flexDirection: 'column', width: '120px', overflow: 'hidden'
                             }}>
                               <button 
-                                onClick={() => openBatchReport(product)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2c3e50' }}
+                                onClick={() => openEditModal(product)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2980b9' }}
                                 onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                📋 Batches
+                                Edit / Update
+                              </button>
+                              <button 
+                                onClick={() => openBatchReport(product)}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#000' }}
+                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                Batches
                               </button>
                               <button 
                                 onClick={() => handleArchive(product.product_id)}
@@ -224,7 +328,7 @@ const Inventory = () => {
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                📦 Archive
+                                Archive
                               </button>
                             </div>
                           </>
@@ -234,7 +338,7 @@ const Inventory = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
                   </tr>
                 )}
               </tbody>
@@ -252,13 +356,79 @@ const Inventory = () => {
         />
       )}
 
+      {/* --- MODAL: EDIT PRODUCT (NEW) --- */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="add-user-modal">
+            <div className="modal-header-red" style={{ backgroundColor: '#d32f2f' }}>
+              <h3>Edit Product Profile</h3>
+              <button 
+                style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                className="close-x" 
+                onClick={() => setShowEditModal(false)}
+              >
+                ✖
+              </button>
+            </div>
+            <form className="modal-form" onSubmit={handleEditSubmit}>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Product Name:</label>
+                  <input type="text" required value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Category:</label>
+                  <input type="text" required value={editData.category} onChange={(e) => setEditData({...editData, category: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Retail / Cost Price (₱):</label>
+                  <input type="number" step="0.01" required value={editData.retail_price} onChange={(e) => setEditData({...editData, retail_price: parseFloat(e.target.value)})} />
+                </div>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Actual Selling Price (₱):</label>
+                  <input type="number" step="0.01" required value={editData.selling_price} onChange={(e) => setEditData({...editData, selling_price: parseFloat(e.target.value)})} />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }}>Save Changes</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- MODAL: ADD PRODUCT --- */}
       {showAddModal && (
         <div className="modal-overlay">
           <div className="add-user-modal">
             <div className="modal-header-red">
               <h3>+ Create Product Profile</h3>
-              <button className="close-x" onClick={handleCloseAttempt}>✖</button>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }} 
+                      className="close-x" 
+                      onClick={handleCloseAttempt}
+                    >
+                      ✖
+                    </button>
             </div>
             <form className="modal-form" onSubmit={handleSave}>
               <div className="form-row">
@@ -275,7 +445,7 @@ const Inventory = () => {
               </div>
 
               <div className="form-row">
-                <div className="form-group">
+                <div className="form-group" style={{ width: '100%' }}>
                   <label>Category:</label>
                   <input 
                     type="text" 
@@ -285,15 +455,29 @@ const Inventory = () => {
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Unit Price (₱):</label>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Retail / Cost Price (₱):</label>
                   <input 
                     type="number" 
                     placeholder="₱0.00"
                     step="0.01"
                     required
-                    value={formData.retail}
-                    onChange={(e) => setFormData({...formData, retail: parseFloat(e.target.value) || 0})}
+                    value={formData.retail_price}
+                    onChange={(e) => setFormData({...formData, retail_price: parseFloat(e.target.value)})}
+                  />
+                </div>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Actual Selling Price (₱):</label>
+                  <input 
+                    type="number" 
+                    placeholder="₱0.00"
+                    step="0.01"
+                    required
+                    value={formData.selling_price}
+                    onChange={(e) => setFormData({...formData, selling_price: parseFloat(e.target.value)})}
                   />
                 </div>
               </div>

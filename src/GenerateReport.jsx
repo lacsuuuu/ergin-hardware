@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -81,7 +82,7 @@ const GenerateReport = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}

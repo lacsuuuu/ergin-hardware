@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
+import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -17,10 +18,11 @@ const Suppliers = () => {
   
   // Modal Toggles
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false); // NEW ADD MODAL STATE
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- NEW STATES FOR ACTION MENU & EDIT/ARCHIVE ---
+  // --- STATES FOR ACTION MENU & EDIT/ARCHIVE ---
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -28,10 +30,15 @@ const Suppliers = () => {
 
   // Form Data 
   const [receiveData, setReceiveData] = useState({
-    product_id: '', supplier_name: '', qty_received: ''
+    product_id: '', supplier_name: '', qty_received: '', retail_price: '' // ADDED RETAIL PRICE
   });
+  
+  const [newSupplierData, setNewSupplierData] = useState({
+    name: '', contact: '', email: '', address: '' // ADDED EMAIL
+  });
+
   const [editData, setEditData] = useState({
-    supplier_name: '', contact: '', address: ''
+    supplier_name: '', contact: '', email: '', address: '' // ADDED EMAIL
   });
 
   // --- EFFECTS ---
@@ -61,6 +68,33 @@ const Suppliers = () => {
     }
   };
 
+  const handleAddSupplier = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/suppliers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSupplierData)
+      });
+
+      if (response.ok) {
+        triggerToast("Supplier added successfully!");
+        setShowAddModal(false);
+        setNewSupplierData({ name: '', contact: '', email: '', address: '' });
+        fetchSuppliers(); 
+      } else {
+        const err = await response.json();
+        alert(`Failed: ${err.error}`);
+      }
+    } catch (error) {
+      console.error("Error adding supplier:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleReceiveStock = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -72,15 +106,16 @@ const Suppliers = () => {
         body: JSON.stringify({
           product_id: receiveData.product_id,
           supplier_name: receiveData.supplier_name,
-          qty_received: parseInt(receiveData.qty_received)
+          qty_received: parseInt(receiveData.qty_received),
+          retail_price: parseFloat(receiveData.retail_price) || 0 // NEW RETAIL PRICE PAYLOAD
         })
       });
 
       if (response.ok) {
         triggerToast("Stock received successfully!");
         setShowReceiveModal(false);
-        setReceiveData({ product_id: '', supplier_name: '', qty_received: '' });
-        fetchProducts(); // Refresh products to show new stock!
+        setReceiveData({ product_id: '', supplier_name: '', qty_received: '', retail_price: '' });
+        fetchProducts(); 
       } else {
         const err = await response.json();
         alert(`Failed: ${err.error}`);
@@ -92,12 +127,13 @@ const Suppliers = () => {
     }
   };
 
-  // --- NEW ACTION HANDLERS ---
+  // --- ACTION HANDLERS ---
   const openEditModal = (supplier) => {
     setSelectedSupplier(supplier);
     setEditData({
       supplier_name: supplier.supplier_name,
       contact: supplier.contact,
+      email: supplier.email || '',
       address: supplier.address
     });
     setShowEditModal(true);
@@ -112,8 +148,29 @@ const Suppliers = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    alert(`Save functionality for ${editData.supplier_name} coming soon!`);
-    setShowEditModal(false);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/suppliers/${selectedSupplier.supplier_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData)
+      });
+
+      if (response.ok) {
+        triggerToast("Supplier updated successfully!");
+        setShowEditModal(false);
+        fetchSuppliers();
+      } else {
+        const err = await response.json();
+        alert(`Failed to update: ${err.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating supplier:", error);
+      alert("Network error while updating supplier.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleArchiveSubmit = async () => {
@@ -147,7 +204,7 @@ const Suppliers = () => {
             <div className="nav-item active">SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}
@@ -166,14 +223,24 @@ const Suppliers = () => {
             <div className="search-wrapper">
               <input type="text" placeholder="Search suppliers..." className="search-input" />
             </div>
-            <div className="filter-group">
+            <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>
+              {/* RECEIVE STOCK BUTTON */}
               <button 
                 className="add-product-btn" 
-                style={{ backgroundColor: '#d3f2f' }} 
+                style={{ backgroundColor: '#d32f2f' }} 
                 onClick={() => setShowReceiveModal(true)}
               >
                 Receive Stock
               </button>
+              {/* ADD SUPPLIER BUTTON */}
+              <button 
+                className="add-product-btn" 
+                style={{ backgroundColor: '#d32f2f' }} 
+                onClick={() => setShowAddModal(true)}
+              >
+                + Add Supplier
+              </button>
+              
             </div>
           </div>
 
@@ -185,8 +252,9 @@ const Suppliers = () => {
                   <th>Supplier ID</th>
                   <th>Supplier Name</th>
                   <th>Contact</th>
+                  <th>Email</th> {/* NEW COLUMN */}
                   <th>Address</th>
-                  <th style={{ textAlign: 'center' }}>Action</th> {/* NEW COLUMN */}
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,9 +264,10 @@ const Suppliers = () => {
                       <td>{sup.supplier_id}</td>
                       <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>{sup.supplier_name}</td>
                       <td>{sup.contact}</td>
+                      <td>{sup.email || 'N/A'}</td> {/* EMAIL DISPLAY */}
                       <td>{sup.address}</td>
                       
-                      {/* NEW ACTION CELL */}
+                      {/* ACTION CELL */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
                         <button 
                           onClick={() => setActiveDropdown(activeDropdown === sup.supplier_id ? null : sup.supplier_id)}
@@ -221,11 +290,11 @@ const Suppliers = () => {
                             }}>
                               <button 
                                 onClick={() => openEditModal(sup)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2980b9' }}
+                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#000' }}
                                 onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                ✏️ Edit
+                                Edit
                               </button>
                               <button 
                                 onClick={() => openArchiveModal(sup)}
@@ -233,7 +302,7 @@ const Suppliers = () => {
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                📦 Archive
+                                Archive
                               </button>
                             </div>
                           </>
@@ -243,7 +312,7 @@ const Suppliers = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No suppliers found. Add them directly in Supabase for now!</td>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No suppliers found. Click "+ Add Supplier" to create one!</td>
                   </tr>
                 )}
               </tbody>
@@ -252,13 +321,103 @@ const Suppliers = () => {
         </main>
       </div>
 
+      {/* --- MODAL: ADD SUPPLIER --- */}
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="add-user-modal">
+            <div className="modal-header-red" style={{ backgroundColor: '#d32f2f' }}>
+              <h3>+ Add New Supplier</h3>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      className="close-x" onClick={() => setShowAddModal(false)}>
+                        ✖
+                        </button>
+            </div>
+            <form className="modal-form" onSubmit={handleAddSupplier}>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Supplier Name:</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={newSupplierData.name} 
+                    onChange={e => setNewSupplierData({...newSupplierData, name: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Contact Number:</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={newSupplierData.contact} 
+                    onChange={e => setNewSupplierData({...newSupplierData, contact: e.target.value})} 
+                  />
+                </div>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Email Address:</label>
+                  <input 
+                    type="email" 
+                    value={newSupplierData.email} 
+                    onChange={e => setNewSupplierData({...newSupplierData, email: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label>Address:</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={newSupplierData.address} 
+                    onChange={e => setNewSupplierData({...newSupplierData, address: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}>
+                  {isLoading ? 'Saving...' : 'Save Supplier'}
+                </button>
+                <button type="button" className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- MODAL: RECEIVE STOCK DELIVERY --- */}
       {showReceiveModal && (
         <div className="modal-overlay">
           <div className="add-user-modal">
-            <div className="modal-header-red" style={{ backgroundColor: '#d3f2f' }}>
+            <div className="modal-header-red" style={{ backgroundColor: '#d32f2f' }}>
               <h3>Log Incoming Delivery</h3>
-              <button className="close-x" onClick={() => setShowReceiveModal(false)}>✖</button>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}className="close-x" onClick={() => setShowReceiveModal(false)}>
+                        ✖
+                        </button>
             </div>
             <form className="modal-form" onSubmit={handleReceiveStock}>
               <div className="form-row">
@@ -285,7 +444,17 @@ const Suppliers = () => {
                   <select 
                     required 
                     value={receiveData.product_id}
-                    onChange={(e) => setReceiveData({...receiveData, product_id: e.target.value})}
+                    onChange={(e) => {
+                  
+                      const selectedId = e.target.value;
+                      const selectedProd = products.find(p => p.product_id.toString() === selectedId);
+                    
+                      setReceiveData({
+                        ...receiveData, 
+                        product_id: selectedId,
+                        retail_price: selectedProd ? selectedProd.retail_price : '' 
+                      });
+                    }}
                     style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
                   >
                     <option value="">-- Choose a Product --</option>
@@ -299,8 +468,8 @@ const Suppliers = () => {
               </div>
 
               <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Quantity Received:</label>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Qty Received:</label>
                   <input 
                     type="number" 
                     min="1"
@@ -310,10 +479,21 @@ const Suppliers = () => {
                     onChange={(e) => setReceiveData({...receiveData, qty_received: e.target.value})}
                   />
                 </div>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Update Retail Price (₱):</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 150.00"
+                    value={receiveData.retail_price}
+                    onChange={(e) => setReceiveData({...receiveData, retail_price: e.target.value})}
+                  />
+                </div>
               </div>
 
               <div className="modal-footer">
-                <button type="submit" className="save-btn" style={{ backgroundColor: '#d3f2f' }} disabled={isLoading}>
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}>
                   {isLoading ? 'Processing...' : 'Receive Delivery'}
                 </button>
                 <button type="button" className="cancel-btn" onClick={() => setShowReceiveModal(false)}>Cancel</button>
@@ -327,44 +507,49 @@ const Suppliers = () => {
       {showEditModal && selectedSupplier && (
         <div className="modal-overlay">
           <div className="add-user-modal">
-            <div className="modal-header-red" style={{ backgroundColor: '#2980b9' }}>
-              <h3>✏️ Edit Supplier Details</h3>
-              <button className="close-x" onClick={() => setShowEditModal(false)}>✖</button>
+            <div className="modal-header-red" style={{ backgroundColor: '#d32f2f' }}>
+              <h3>Edit Supplier Details</h3>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}className="close-x" onClick={() => setShowEditModal(false)}>
+                        ✖
+                        </button>
             </div>
             <form className="modal-form" onSubmit={handleEditSubmit}>
               <div className="form-row">
                 <div className="form-group" style={{ width: '100%' }}>
                   <label>Supplier Name:</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={editData.supplier_name}
-                    onChange={(e) => setEditData({...editData, supplier_name: e.target.value})}
-                  />
+                  <input type="text" required value={editData.supplier_name} onChange={(e) => setEditData({...editData, supplier_name: e.target.value})} />
                 </div>
               </div>
               <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
+                <div className="form-group" style={{ width: '50%' }}>
                   <label>Contact Number:</label>
-                  <input 
-                    type="text" 
-                    value={editData.contact}
-                    onChange={(e) => setEditData({...editData, contact: e.target.value})}
-                  />
+                  <input type="text" value={editData.contact} onChange={(e) => setEditData({...editData, contact: e.target.value})} />
+                </div>
+                <div className="form-group" style={{ width: '50%' }}>
+                  <label>Email Address:</label>
+                  <input type="email" value={editData.email} onChange={(e) => setEditData({...editData, email: e.target.value})} />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ width: '100%' }}>
                   <label>Address:</label>
-                  <input 
-                    type="text" 
-                    value={editData.address}
-                    onChange={(e) => setEditData({...editData, address: e.target.value})}
-                  />
+                  <input type="text" value={editData.address} onChange={(e) => setEditData({...editData, address: e.target.value})} />
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="submit" className="save-btn" style={{ backgroundColor: '#2980b9' }}>Save Changes</button>
+                <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}> {isLoading ? 'Saving...' : 'Save Changes'} </button>
                 <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
               </div>
             </form>
@@ -376,21 +561,13 @@ const Suppliers = () => {
       {showArchiveModal && selectedSupplier && (
         <div className="modal-overlay alert-overlay">
           <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
-            <h3 style={{ color: '#e74c3c', marginTop: 0 }}>📦 Archive Supplier?</h3>
-            <p style={{ color: '#34495e', marginBottom: '20px' }}>
+            <h3 style={{ color: '#e74c3c', marginTop: 0 }}>Archive Supplier?</h3>
+            <p style={{ color: '#000', marginBottom: '20px' }}>
               Are you sure you want to archive <strong>{selectedSupplier.supplier_name}</strong>? They will no longer appear in your active dropdowns for receiving stock.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              <button 
-                onClick={handleArchiveSubmit} 
-                style={{ padding: '10px 20px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                Yes, Archive
-              </button>
-              <button 
-                onClick={() => setShowArchiveModal(false)} 
-                style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                Cancel
-              </button>
+              <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
+              <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
             </div>
           </div>
         </div>

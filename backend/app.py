@@ -40,15 +40,38 @@ def add_supplier():
     try:
         data = request.json
         mapped_data = {
-            "supplier_name": data.get("name"),   
-            "contact": data.get("contact"),
-            "address": data.get("address")
+            "product_name": data.get("name"),
+            "category": data.get("category"),
+            "stock": 0,         
+            "retail_price": data.get("retail_price"),
+            "selling_price": data.get("selling_price")
         }
         
         response = supabase.table('supplier').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
         print("--- ADD SUPPLIER ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/suppliers/<int:supplier_id>', methods=['PUT'])
+def update_supplier(supplier_id):
+    # Updates an existing supplier's details
+    try:
+        data = request.json
+            
+        # Map the incoming React data to your database columns
+        mapped_data = {
+            "supplier_name": data.get("supplier_name"),
+            "contact": data.get("contact"),
+            "email": data.get("email"),
+            "address": data.get("address")
+        }
+            
+        response = supabase.table('supplier').update(mapped_data).eq('supplier_id', supplier_id).execute()
+            
+        return jsonify(response.data), 200
+    except Exception as e:
+        print(f"--- UPDATE SUPPLIER {supplier_id} ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
@@ -80,6 +103,28 @@ def add_product():
         return jsonify(response.data)
     except Exception as e:
         print("--- ADD PRODUCT ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+    
+# UPDATE: Edit existing product details
+@app.route('/api/product/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    try:
+        data = request.json
+        print(f"--- INCOMING EDIT DATA FOR PRODUCT {product_id} ---", data)
+        
+        mapped_data = {
+            "product_name": data.get("name"),
+            "category": data.get("category"),
+            "retail_price": data.get("retail_price"),
+            "selling_price": data.get("selling_price")
+        }
+        
+        response = supabase.table('product').update(mapped_data).eq('product_id', product_id).execute()
+        return jsonify(response.data), 200
+        
+    except Exception as e:
+        print(f"\n!!! UPDATE PRODUCT {product_id} ERROR !!!")
+        print(e)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory/<item_id>', methods=['DELETE'])
@@ -244,6 +289,7 @@ def process_sale():
             price = float(item['price'])
             subtotal = float(item['subtotal'])
             
+            # Step 2: Save line item (sales_details)
             supabase.table('sales_details').insert({
                 "sales_id": sales_id,
                 "product_id": p_id,
@@ -252,19 +298,50 @@ def process_sale():
                 "subtotal": subtotal
             }).execute()
             
+            # Step 3: Deduct Live Inventory (product table) SAFELY
             prod_data = supabase.table('product').select('stock').eq('product_id', p_id).execute()
             current_stock = prod_data.data[0]['stock'] if prod_data.data else 0
             
+            safe_new_stock = max(0, current_stock - qty)
             supabase.table('product').update({
-                "stock": current_stock - qty 
+                "stock": safe_new_stock 
             }).eq('product_id', p_id).execute()
             
+            # Step 4: Write to Audit Log (inventory_log)
             supabase.table('inventory_log').insert({
                 "product_id": p_id,
                 "transaction_type": "Sale",
                 "quantity_change": -qty, 
                 "date": current_date
             }).execute()
+
+            # --- NEW STEP 5: FIFO Batch Deduction (The Magic) ---
+            qty_to_deduct = qty
+            
+            # Fetch all batches for this product that still have items inside, oldest first!
+            batches_res = supabase.table('product_batches')\
+                .select('*')\
+                .eq('product_id', p_id)\
+                .gt('qty_remaining', 0)\
+                .order('date_received')\
+                .execute()
+            
+            for batch in batches_res.data:
+                if qty_to_deduct <= 0:
+                    break # We found enough items, stop checking boxes!
+                    
+                batch_id = batch['batch_id']
+                available_in_batch = batch['qty_remaining']
+                
+                if available_in_batch >= qty_to_deduct:
+                    # This box has enough to cover the rest of the order
+                    new_remaining = available_in_batch - qty_to_deduct
+                    supabase.table('product_batches').update({"qty_remaining": new_remaining}).eq('batch_id', batch_id).execute()
+                    qty_to_deduct = 0
+                else:
+                    # This box doesn't have enough! Empty it completely and keep looking.
+                    supabase.table('product_batches').update({"qty_remaining": 0}).eq('batch_id', batch_id).execute()
+                    qty_to_deduct -= available_in_batch
 
         return jsonify({"success": True, "sales_id": sales_id}), 201
 
@@ -496,6 +573,9 @@ def receive_stock():
         product_id = data.get('product_id')
         supplier_name = data.get('supplier_name')
         qty_received = int(data.get('qty_received', 0)) 
+        
+        # --- NEW: Grab the retail price sent from React ---
+        retail_price = data.get('retail_price') 
 
         if not product_id or not supplier_name or qty_received <= 0:
             return jsonify({"error": "Missing required fields or invalid quantity"}), 400
@@ -516,7 +596,13 @@ def receive_stock():
         current_stock = product_res.data[0]['stock']
         new_total_stock = current_stock + qty_received
 
-        supabase.table('product').update({"stock": new_total_stock}).eq('product_id', product_id).execute()
+        # --- NEW: Build the update payload to include the new price if it exists ---
+        update_payload = {"stock": new_total_stock}
+        if retail_price and float(retail_price) > 0:
+            update_payload["retail_price"] = float(retail_price)
+
+        # Save both the stock and the new price back to the main table
+        supabase.table('product').update(update_payload).eq('product_id', product_id).execute()
 
         return jsonify({
             "message": "Stock received and batch logged successfully!", 

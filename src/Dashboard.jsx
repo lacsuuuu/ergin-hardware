@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TopHeader from './TopHeader';
 import './index.css';
 import logo from './assets/logotrans.png';
+import Logout from './Logout';
 
 
 
@@ -61,7 +62,7 @@ const Dashboard = () => {
             <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
             <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
           </nav>
-          <div className="sidebar-footer">👤</div>
+          <Logout />
         </aside>
 
         {/* Main Content */}
@@ -78,23 +79,23 @@ const Dashboard = () => {
           {/* KPI Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
             
-            <div className="shadow-box" style={{ background: '#2c3e50', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#bdc3c7' }}>TOTAL REVENUE</h3>
+            <div className="shadow-box" style={{ background: '#f8f9fa', padding: '15px 25px', borderradius: '6px', borderLeft: '4px solid #d32f2f' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#000' }}>TOTAL REVENUE</h3>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>₱{dashboardData.total_revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
             </div>
 
-            <div className="shadow-box" style={{ background: '#3498db', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#ecf0f1' }}>TOTAL SALES</h3>
+            <div className="shadow-box" style={{ background: '#f8f9fa', padding: '15px 25px', borderradius: '6px', borderLeft: '4px solid #d83333' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#000' }}>TOTAL SALES</h3>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{dashboardData.total_sales_count}</div>
             </div>
 
-            <div className="shadow-box" style={{ background: '#27ae60', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#ecf0f1' }}>TOTAL PRODUCTS</h3>
+            <div className="shadow-box" style={{ background: '#f8f9fa', padding: '15px 25px', borderradius: '6px', borderLeft: '4px solid #be2a2a' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#000' }}>TOTAL PRODUCTS</h3>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{dashboardData.total_products}</div>
             </div>
 
-            <div className="shadow-box" style={{ background: dashboardData.low_stock_count > 0 ? '#e74c3c' : '#f39c12', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#ecf0f1' }}>LOW STOCK ALERTS</h3>
+            <div className="shadow-box" style={{ background: '#f8f9fa', padding: '15px 25px', borderradius: '6px', borderLeft: '4px solid #ac372f' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#000' }}>LOW STOCK ALERTS</h3>
               <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{dashboardData.low_stock_count}</div>
             </div>
 
