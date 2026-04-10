@@ -5,9 +5,22 @@ import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+import searchIcon from './assets/supplier_search button.png'; // Search icon
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
+
+const ROWS_PER_PAGE = 8; // Added pagination constant
 
 const Suppliers = () => {
   const navigate = useNavigate();
@@ -15,10 +28,12 @@ const Suppliers = () => {
   // --- STATE MANAGEMENT ---
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(''); // Added search state
+  const [currentPage, setCurrentPage] = useState(1); // Added pagination state
   
   // Modal Toggles
   const [showReceiveModal, setShowReceiveModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false); // NEW ADD MODAL STATE
+  const [showAddModal, setShowAddModal] = useState(false); 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,15 +45,15 @@ const Suppliers = () => {
 
   // Form Data 
   const [receiveData, setReceiveData] = useState({
-    product_id: '', supplier_name: '', qty_received: '', retail_price: '' // ADDED RETAIL PRICE
+    product_id: '', supplier_name: '', qty_received: '', retail_price: '' 
   });
   
   const [newSupplierData, setNewSupplierData] = useState({
-    name: '', contact: '', email: '', address: '' // ADDED EMAIL
+    name: '', contact: '', email: '', address: '' 
   });
 
   const [editData, setEditData] = useState({
-    supplier_name: '', contact: '', email: '', address: '' // ADDED EMAIL
+    supplier_name: '', contact: '', email: '', address: '' 
   });
 
   // --- EFFECTS ---
@@ -107,7 +122,7 @@ const Suppliers = () => {
           product_id: receiveData.product_id,
           supplier_name: receiveData.supplier_name,
           qty_received: parseInt(receiveData.qty_received),
-          retail_price: parseFloat(receiveData.retail_price) || 0 // NEW RETAIL PRICE PAYLOAD
+          retail_price: parseFloat(receiveData.retail_price) || 0 
         })
       });
 
@@ -184,9 +199,55 @@ const Suppliers = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
+  // --- FILTER & PAGINATION LOGIC ---
+  const filteredSuppliers = suppliers.filter(s => 
+    s.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.supplier_id?.toString().includes(searchTerm)
+  );
+
+  const totalPages = Math.ceil(filteredSuppliers.length / ROWS_PER_PAGE);
+  const paginatedSuppliers = filteredSuppliers.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 when searching
+  };
+
   return (
     <div className="outer-margin-container">
-      {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
+      
+      {/* FIXED TOAST NOTIFICATION: Styled to match system theme */}
+      {toast.show && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: '30px', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 10000,
+            background: toast.type === 'error' ? '#990000' : '#d10000', 
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(209, 0, 0, 0.25)', 
+            fontWeight: 'bold',
+            fontSize: '14px',
+            textAlign: 'center',
+            minWidth: '200px',
+            border: '1px solid #b30000'
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
 
       <div className="connected-border-box">
         {/* Sidebar */}
@@ -195,14 +256,30 @@ const Suppliers = () => {
             <img src={logo} alt="Ergin Hardware" className="sidebar-logo" />
           </div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
-            <div className="nav-item active">SUPPLIERS</div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            <div className="nav-item" onClick={() => navigate('/sales-record')}>
+              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/user-access')}>
+              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/transact')}>
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/generate-report')}>
+              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+            </div>
+            <div className="nav-item active">
+              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/clients')}>
+              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+            </div>
           </nav>
           <Logout />
         </aside>
@@ -210,8 +287,9 @@ const Suppliers = () => {
         {/* Main Content */}
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area">
-              <h2>Supplier Management</h2>
+            <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src={supplierIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+              <h2 style={{ margin: 0 }}>Supplier Management</h2>
             </div>
             <TopHeader />
           </header>
@@ -219,10 +297,28 @@ const Suppliers = () => {
           <hr className="divider" />
 
           {/* Controls Area */}
-          <div className="inventory-controls" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div className="search-wrapper">
-              <input type="text" placeholder="Search suppliers..." className="search-input" />
+          <div className="inventory-controls" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+            
+            {/* UPDATED: Search Bar with Icon */}
+            <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
+              <img 
+                src={searchIcon} 
+                alt="Search" 
+                style={{
+                  position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                  width: '18px', height: '18px', pointerEvents: 'none'
+                }} 
+              />
+              <input 
+                type="text" 
+                placeholder="Search suppliers..." 
+                className="search-input"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                style={{ paddingLeft: '36px', width: '100%' }} 
+              />
             </div>
+
             <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>
               {/* RECEIVE STOCK BUTTON */}
               <button 
@@ -240,7 +336,6 @@ const Suppliers = () => {
               >
                 + Add Supplier
               </button>
-              
             </div>
           </div>
 
@@ -249,22 +344,24 @@ const Suppliers = () => {
             <table className="inventory-table">
               <thead>
                 <tr>
-                  <th>Supplier ID</th>
-                  <th>Supplier Name</th>
-                  <th>Contact</th>
-                  <th>Email</th> {/* NEW COLUMN */}
-                  <th>Address</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  {/* UPDATED: Bold Table Headers */}
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Supplier ID</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Supplier Name</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Contact</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Email</th> 
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Address</th>
+                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {suppliers.length > 0 ? (
-                  suppliers.map((sup) => (
+                {/* UPDATED: Mapping over paginatedSuppliers instead of raw suppliers array */}
+                {paginatedSuppliers.length > 0 ? (
+                  paginatedSuppliers.map((sup) => (
                     <tr key={sup.supplier_id}>
                       <td>{sup.supplier_id}</td>
                       <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>{sup.supplier_name}</td>
                       <td>{sup.contact}</td>
-                      <td>{sup.email || 'N/A'}</td> {/* EMAIL DISPLAY */}
+                      <td>{sup.email || 'N/A'}</td> 
                       <td>{sup.address}</td>
                       
                       {/* ACTION CELL */}
@@ -318,6 +415,55 @@ const Suppliers = () => {
               </tbody>
             </table>
           </div>
+
+          {/* NEW: Uniform Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? '#eee' : '#d10000',
+                  color: currentPage === 1 ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                ← Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    background: currentPage === page ? '#d10000' : 'white',
+                    color: currentPage === page ? 'white' : '#333',
+                    border: '1px solid #ddd', borderRadius: '4px',
+                    padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold',
+                    minWidth: '34px'
+                  }}>
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? '#eee' : '#d10000',
+                  color: currentPage === totalPages ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                Next →
+              </button>
+
+              <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                Page {currentPage} of {totalPages} ({filteredSuppliers.length} records)
+              </span>
+            </div>
+          )}
+
         </main>
       </div>
 

@@ -5,6 +5,16 @@ import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
@@ -51,6 +61,11 @@ const GenerateReport = () => {
     }
   };
 
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
   return (
     <div className="outer-margin-container">
       
@@ -73,14 +88,30 @@ const GenerateReport = () => {
         <aside className="sidebar no-print">
           <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item active">GENERATE REPORT</div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            <div className="nav-item" onClick={() => navigate('/sales-record')}>
+              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/user-access')}>
+              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/transact')}>
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            <div className="nav-item active">
+              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/suppliers')}>
+              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/clients')}>
+              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+            </div>
           </nav>
           <Logout />
         </aside>
@@ -89,7 +120,10 @@ const GenerateReport = () => {
         <main className="dashboard-content" style={{ display: 'flex', flexDirection: 'column' }}>
           
           <header className="main-header no-print">
-            <div className="title-area"><h2>Generate Reports</h2></div>
+            <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src={generateReportIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+              <h2 style={{ margin: 0 }}>Generate Reports</h2>
+            </div>
             <TopHeader />
           </header>
 

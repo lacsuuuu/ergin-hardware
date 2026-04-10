@@ -6,48 +6,69 @@ import TopHeader from './TopHeader';
 import BatchReport from './BatchReport';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+import searchIcon from './assets/supplier_search button.png'; // Added search icon import
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://127.0.0.1:5000' 
+  ? 'http://127.0.0.1:5000'
   : 'https://ergin-hardware.onrender.com';
+
+const ITEMS_PER_PAGE = 8;
+
+const CATEGORIES = [
+  'Tools',
+  'Hardware',
+  'Electrical',
+  'Plumbing',
+  'Paint & Supplies',
+  'Construction Materials',
+  'Safety Equipment',
+  'Fasteners',
+  'Others',
+];
 
 const Inventory = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const currentRole = localStorage.getItem('currentRole');
+  const isAdmin = currentRole === 'Admin';
 
-  // --- STATE MANAGEMENT ---
   const [products, setProducts] = useState([]);
-  
-  // Modal Toggles
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false); // NEW EDIT MODAL
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('');
-  
-  // Form Data 
+
   const [formData, setFormData] = useState({
     name: '', category: '', retail_price: 0, selling_price: 0
   });
 
   const [editData, setEditData] = useState({
     id: '', name: '', category: '', retail_price: 0, selling_price: 0
-  }); // NEW EDIT DATA STATE
+  });
 
-  // --- STATES FOR ACTION MENU & BATCH REPORT ---
-  const [activeDropdown, setActiveDropdown] = useState(null); 
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [showBatchReport, setShowBatchReport] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null); 
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // --- EFFECTS ---
   useEffect(() => {
     fetchInventory();
-    
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // --- API CALLS ---
   const fetchInventory = async () => {
     try {
       const response = await fetch(`${API_URL}/api/inventory`);
@@ -66,10 +87,9 @@ const Inventory = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-
       if (response.ok) {
         triggerToast("Product profile created successfully!");
-        fetchInventory(); 
+        fetchInventory();
         closeFormCompletely();
       } else {
         alert("Failed to save product. Check the Flask terminal.");
@@ -79,7 +99,6 @@ const Inventory = () => {
     }
   };
 
-  // --- NEW: EDIT API CALL ---
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -88,7 +107,6 @@ const Inventory = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData)
       });
-
       if (response.ok) {
         triggerToast("Product updated successfully!");
         setShowEditModal(false);
@@ -101,7 +119,6 @@ const Inventory = () => {
     }
   };
 
-  // --- HELPERS ---
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
@@ -137,57 +154,77 @@ const Inventory = () => {
       category: product.category,
       qty: product.stock,
       retail: product.retail_price || 0,
-      unit: 'pcs' 
+      unit: 'pcs'
     });
     setShowBatchReport(true);
-    setActiveDropdown(null); 
+    setActiveDropdown(null);
   };
 
   const handleArchive = (productId) => {
     alert(`Archive functionality for Product ID: ${productId} coming soon!`);
     setActiveDropdown(null);
   };
-  
+
   const filteredProducts = products.filter(product => {
     if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-  
-  return (
-      // Checks every single column for a match!
-      product.product_id?.toString().toLowerCase().includes(searchLower) ||
-      product.product_name?.toLowerCase().includes(searchLower) ||
-      product.category?.toLowerCase().includes(searchLower) ||
-      product.stock?.toString().toLowerCase().includes(searchLower) ||
-      product.retail_price?.toString().toLowerCase().includes(searchLower) ||
-      product.selling_price?.toString().toLowerCase().includes(searchLower)
+    const s = searchTerm.toLowerCase();
+    return (
+      product.product_id?.toString().toLowerCase().includes(s) ||
+      product.product_name?.toLowerCase().includes(s) ||
+      product.category?.toLowerCase().includes(s) ||
+      product.stock?.toString().toLowerCase().includes(s) ||
+      product.retail_price?.toString().toLowerCase().includes(s) ||
+      product.selling_price?.toString().toLowerCase().includes(s)
     );
   });
 
-  // --- SORTING LOGIC ---
-  // We use [...filteredProducts] to make a safe copy so we don't accidentally mutate the original data
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortOption) {
-      case 'name-asc':
-        return (a.product_name || '').localeCompare(b.product_name || '');
-      case 'name-desc':
-        return (b.product_name || '').localeCompare(a.product_name || '');
-      case 'price-low':
-        return (Number(a.selling_price) || 0) - (Number(b.selling_price) || 0);
-      case 'price-high':
-        return (Number(b.selling_price) || 0) - (Number(a.selling_price) || 0);
-      case 'stock-low':
-        return (Number(a.stock) || 0) - (Number(b.stock) || 0);
-      case 'stock-high':
-        return (Number(b.stock) || 0) - (Number(a.stock) || 0);
-      default:
-        return 0; // If nothing is selected, leave it exactly as it came from the database
+      case 'name-asc': return (a.product_name || '').localeCompare(b.product_name || '');
+      case 'name-desc': return (b.product_name || '').localeCompare(a.product_name || '');
+      case 'price-low': return (Number(a.selling_price) || 0) - (Number(b.selling_price) || 0);
+      case 'price-high': return (Number(b.selling_price) || 0) - (Number(a.selling_price) || 0);
+      case 'stock-low': return (Number(a.stock) || 0) - (Number(b.stock) || 0);
+      case 'stock-high': return (Number(b.stock) || 0) - (Number(a.stock) || 0);
+      default: return 0;
     }
   });
 
+  // Pagination
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
+
+  // Reset to page 1 when search/sort changes
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, sortOption]);
+
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
+  // Shared modal input style
+  const inputStyle = {
+    width: '100%', padding: '9px 12px', border: '1px solid #ddd',
+    borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box',
+    outline: 'none', transition: 'border 0.2s'
+  };
+
+  const labelStyle = {
+    fontSize: '12px', fontWeight: '600', color: '#555', marginBottom: '5px', display: 'block'
+  };
+
   return (
     <div className="outer-margin-container">
-      {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>{toast.message}</div>
+      )}
 
       <div className="connected-border-box">
         {/* Sidebar */}
@@ -196,14 +233,40 @@ const Inventory = () => {
             <img src={logo} alt="Ergin Hardware" className="sidebar-logo" />
           </div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item active" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item active" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            {isAdmin && (
+              <div className="nav-item" onClick={() => navigate('/sales-record')}>
+                <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+              </div>
+            )}
+            {isAdmin && (
+              <div className="nav-item" onClick={() => navigate('/user-access')}>
+                <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+              </div>
+            )}
+            <div className="nav-item" onClick={() => navigate('/transact')}>
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            {isAdmin && (
+              <div className="nav-item" onClick={() => navigate('/generate-report')}>
+                <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+              </div>
+            )}
+            {isAdmin && (
+              <div className="nav-item" onClick={() => navigate('/suppliers')}>
+                <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+              </div>
+            )}
+            {isAdmin && (
+              <div className="nav-item" onClick={() => navigate('/clients')}>
+                <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+              </div>
+            )}
           </nav>
           <Logout />
         </aside>
@@ -211,124 +274,136 @@ const Inventory = () => {
         {/* Main Content */}
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area">
-              <h2>Inventory Management</h2>
+            <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src={inventoryIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+              <h2 style={{ margin: 0 }}>Inventory Management</h2>
             </div>
             <TopHeader />
           </header>
 
           <hr className="divider" />
-          {/* Controls Area */}
+
+          {/* Controls */}
           <div className="inventory-controls">
-            <div className="search-wrapper">
-              <input 
-                  type="text" 
-                  placeholder="Search all columns..." 
-                  className="search-input"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+            
+            {/* Added Search Icon Logic Here */}
+            <div className="search-wrapper" style={{ position: 'relative' }}>
+              <img 
+                src={searchIcon} 
+                alt="Search" 
+                style={{
+                  position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                  width: '18px', height: '18px', pointerEvents: 'none'
+                }} 
+              />
+              <input
+                type="text"
+                placeholder="Search all columns..."
+                className="search-input"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: '36px' }} // Padding ensures text doesn't overlap the icon
               />
             </div>
+
             <div className="filter-group">
-                  <select 
-                    className="filter-select" 
-                    value={sortOption} 
-                    onChange={(e) => setSortOption(e.target.value)}
-                  >
-                    <option value="">Sort by...</option>
-                    <option value="name-asc">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
-                    <option value="price-high">Price (Highest First)</option>
-                    <option value="price-low">Price (Lowest First)</option>
-                    <option value="stock-high">Stock (Highest First)</option>
-                    <option value="stock-low">Stock (Lowest First)</option>
-                  </select>
+              <select
+                className="filter-select"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+              >
+                <option value="">Sort by...</option>
+                <option value="name-asc">Name (A–Z)</option>
+                <option value="name-desc">Name (Z–A)</option>
+                <option value="price-high">Price (Highest First)</option>
+                <option value="price-low">Price (Lowest First)</option>
+                <option value="stock-high">Stock (Highest First)</option>
+                <option value="stock-low">Stock (Lowest First)</option>
+              </select>
               <button className="add-product-btn" onClick={() => setShowAddModal(true)}>
                 + Add Product
               </button>
             </div>
           </div>
 
-          {/* Table Area */}
+          {/* Table */}
           <div className="table-container shadow-box">
             <table className="inventory-table">
               <thead>
                 <tr>
-                  <th>Product ID</th>
-                  <th>Product Name</th>
-                  <th>Category</th>
-                  <th>Stock Qty</th>
-                  <th>Retail Price</th>
-                  <th>Selling Price</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
+                  {/* Applied Bold Styling to Headers */}
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Product ID</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Product Name</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Category</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Stock Qty</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Selling Price</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Retail / Cost Price</th>
+                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.length > 0 ? (
-                  sortedProducts.map((product) => (
+                {paginatedProducts.length > 0 ? (
+                  paginatedProducts.map((product) => (
                     <tr key={product.product_id}>
                       <td>{product.product_id}</td>
-                      <td style={{ fontWeight: 'bold' }}>{product.product_name}</td>
+                      <td style={{ fontWeight: '600' }}>{product.product_name}</td>
                       <td>{product.category}</td>
                       <td>
-                        <span style={{ 
-                          color: product.stock > 0 ? '#27ae60' : '#e74c3c', 
-                          fontWeight: 'bold' 
+                        <span style={{
+                          color: product.stock > 10 ? '#27ae60' : product.stock > 0 ? '#e67e22' : '#e74c3c',
+                          fontWeight: 'bold'
                         }}>
                           {product.stock}
                         </span>
                       </td>
-                      <td style={{ color: '#000' }}>
-                        ₱{Number(product.retail_price || 0).toFixed(2)}
-                      </td>
-                      <td style={{ color: '#000' }}>
-                        ₱{Number(product.selling_price || 0).toFixed(2)}
-                      </td>
-                      
+                      {/* SWAPPED: Selling Price first */}
+                      <td style={{ color: '#000' }}>₱{Number(product.selling_price || 0).toFixed(2)}</td>
+                      <td style={{ color: '#555' }}>₱{Number(product.retail_price || 0).toFixed(2)}</td>
+
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
-                        <button 
+                        <button
                           onClick={() => setActiveDropdown(activeDropdown === product.product_id ? null : product.product_id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', color: '#7f8c8d' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#7f8c8d', padding: '4px 8px' }}
                         >
                           ⋮
                         </button>
 
-                        {/* Dropdown Menu */}
                         {activeDropdown === product.product_id && (
                           <>
-                            <div 
-                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} 
+                            <div
+                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
                               onClick={() => setActiveDropdown(null)}
                             />
-                            
                             <div style={{
-                              position: 'absolute', right: '40px', top: '25px', background: 'white',
-                              border: '1px solid #e0e0e0', borderRadius: '6px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                              zIndex: 10, display: 'flex', flexDirection: 'column', width: '120px', overflow: 'hidden'
+                              position: 'absolute', right: '40px', top: '25px',
+                              background: 'white', border: '1px solid #e0e0e0',
+                              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                              zIndex: 10, display: 'flex', flexDirection: 'column',
+                              width: '130px', overflow: 'hidden'
                             }}>
-                              <button 
+                              <button
                                 onClick={() => openEditModal(product)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#2980b9' }}
-                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                Edit / Update
+                                 Edit
                               </button>
-                              <button 
+                              <button
                                 onClick={() => openBatchReport(product)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#000' }}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
                                 onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                Batches
+                                 Batches
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleArchive(product.product_id)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', color: '#e74c3c' }}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                Archive
+                                 Archive
                               </button>
                             </div>
                           </>
@@ -338,184 +413,242 @@ const Inventory = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No products found. Add one above!</td>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#999', fontSize: '13px' }}>
+                      No products found.
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
+              <span style={{ fontSize: '12px', color: '#888' }}>
+                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sortedProducts.length)} of {sortedProducts.length} products
+              </span>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
+                    background: currentPage === 1 ? '#f5f5f5' : 'white',
+                    color: currentPage === 1 ? '#bbb' : '#333',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px', fontWeight: '600'
+                  }}
+                >
+                  ← Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    style={{
+                      padding: '5px 10px', borderRadius: '6px',
+                      border: page === currentPage ? 'none' : '1px solid #ddd',
+                      background: page === currentPage ? '#d10000' : 'white',
+                      color: page === currentPage ? 'white' : '#333',
+                      cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                      minWidth: '32px'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
+                    background: currentPage === totalPages ? '#f5f5f5' : 'white',
+                    color: currentPage === totalPages ? '#bbb' : '#333',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '12px', fontWeight: '600'
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
-      {/* --- RENDER THE BATCH REPORT IF OPEN --- */}
+      {/* Batch Report */}
       {showBatchReport && selectedProduct && (
-        <BatchReport 
-          activeProduct={selectedProduct} 
-          currentTime={currentTime} 
-          onClose={() => setShowBatchReport(false)} 
+        <BatchReport
+          activeProduct={selectedProduct}
+          currentTime={currentTime}
+          onClose={() => setShowBatchReport(false)}
         />
       )}
 
-      {/* --- MODAL: EDIT PRODUCT (NEW) --- */}
-      {showEditModal && (
+      {/* ── MODAL: ADD PRODUCT ── */}
+      {showAddModal && (
         <div className="modal-overlay">
-          <div className="add-user-modal">
-            <div className="modal-header-red" style={{ backgroundColor: '#d32f2f' }}>
-              <h3>Edit Product Profile</h3>
-              <button 
-                style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
-                className="close-x" 
-                onClick={() => setShowEditModal(false)}
-              >
+          <div style={{
+            background: 'white', borderRadius: '10px', width: '480px',
+            maxWidth: '95vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', overflow: 'hidden'
+          }}>
+            {/* Header Styled like UserAccess */}
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Create Product Profile</h3>
+              <button style={{
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={handleCloseAttempt}>
                 ✖
               </button>
             </div>
-            <form className="modal-form" onSubmit={handleEditSubmit}>
-              <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Product Name:</label>
-                  <input type="text" required value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
-                </div>
+
+            {/* Form */}
+            <form onSubmit={handleSave} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={labelStyle}>Product Name</label>
+                <input type="text" placeholder="e.g. Steel Nails" required style={inputStyle}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
 
-              <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Category:</label>
-                  <input type="text" required value={editData.category} onChange={(e) => setEditData({...editData, category: e.target.value})} />
-                </div>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={labelStyle}>Category</label>
+                <select required style={inputStyle}
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+                  <option value="">— Select Category —</option>
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
               </div>
 
-              <div className="form-row">
-                <div className="form-group" style={{ width: '50%' }}>
-                  <label>Retail / Cost Price (₱):</label>
-                  <input type="number" step="0.01" required value={editData.retail_price} onChange={(e) => setEditData({...editData, retail_price: parseFloat(e.target.value)})} />
-                </div>
-                <div className="form-group" style={{ width: '50%' }}>
-                  <label>Actual Selling Price (₱):</label>
-                  <input type="number" step="0.01" required value={editData.selling_price} onChange={(e) => setEditData({...editData, selling_price: parseFloat(e.target.value)})} />
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }}>Save Changes</button>
-                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL: ADD PRODUCT --- */}
-      {showAddModal && (
-        <div className="modal-overlay">
-          <div className="add-user-modal">
-            <div className="modal-header-red">
-              <h3>+ Create Product Profile</h3>
-              <button style={{
-                        background: '#f1f2f6',
-                        color: '#333',
-                        border: '1px solid #bdc3c7',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        padding: '4px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }} 
-                      className="close-x" 
-                      onClick={handleCloseAttempt}
-                    >
-                      ✖
-                    </button>
-            </div>
-            <form className="modal-form" onSubmit={handleSave}>
-              <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Product Name:</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Steel Nails"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Category:</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Hardware"
-                    required
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group" style={{ width: '50%' }}>
-                  <label>Retail / Cost Price (₱):</label>
-                  <input 
-                    type="number" 
-                    placeholder="₱0.00"
-                    step="0.01"
-                    required
-                    value={formData.retail_price}
-                    onChange={(e) => setFormData({...formData, retail_price: parseFloat(e.target.value)})}
-                  />
-                </div>
-                <div className="form-group" style={{ width: '50%' }}>
-                  <label>Actual Selling Price (₱):</label>
-                  <input 
-                    type="number" 
-                    placeholder="₱0.00"
-                    step="0.01"
-                    required
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={labelStyle}>Selling Price (₱)</label>
+                  <input type="number" placeholder="0.00" step="0.01" required style={inputStyle}
                     value={formData.selling_price}
-                    onChange={(e) => setFormData({...formData, selling_price: parseFloat(e.target.value)})}
-                  />
+                    onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) })} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Retail / Cost Price (₱)</label>
+                  <input type="number" placeholder="0.00" step="0.01" required style={inputStyle}
+                    value={formData.retail_price}
+                    onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) })} />
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>Initial Stock:</label>
-                  <input 
-                    type="text" 
-                    value="0 (Add stock via Supplier Restock)"
-                    disabled
-                    className="readonly-input"
-                    style={{ color: '#7f8c8d', fontStyle: 'italic', backgroundColor: '#f9f9f9' }}
-                  />
-                </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Initial Stock</label>
+                <input type="text" disabled style={{ ...inputStyle, background: '#f7f7f7', color: '#999', fontStyle: 'italic' }}
+                  value="0 — Add stock via Supplier Restock" />
               </div>
 
-              <div className="modal-footer">
-                <button type="submit" className="save-btn">Save Profile</button>
-                <button type="button" className="cancel-btn" onClick={handleCloseAttempt}>Cancel</button>
+              {/* Footer Styled like UserAccess */}
+              <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+                <button type="button" className="cancel-btn" onClick={handleCloseAttempt} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Profile</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- MODAL: DISCARD CHANGES --- */}
-      {showDiscardModal && (
-        <div className="modal-overlay alert-overlay">
-          <div className="delete-confirm-modal">
-            <div className="modal-header-red">
-              <h3>Discard Changes?</h3>
+      {/* ── MODAL: EDIT PRODUCT ── */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div style={{
+            background: 'white', borderRadius: '10px', width: '480px',
+            maxWidth: '95vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', overflow: 'hidden'
+          }}>
+            {/* Header Styled like UserAccess */}
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Edit Product Profile</h3>
+              <button style={{
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={() => setShowEditModal(false)}>
+                ✖
+              </button>
             </div>
-            <div className="delete-modal-body">
-              <p>Are you sure you want to quit editing?</p>
-              <div className="delete-modal-footer">
-                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard Changes</button>
-                <button className="cancel-delete-btn" onClick={() => setShowDiscardModal(false)}>Keep Editing</button>
+
+            <form onSubmit={handleEditSubmit} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={labelStyle}>Product Name</label>
+                <input type="text" required style={inputStyle}
+                  value={editData.name}
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })} />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={labelStyle}>Category</label>
+                <select required style={inputStyle}
+                  value={editData.category}
+                  onChange={(e) => setEditData({ ...editData, category: e.target.value })}>
+                  <option value="">— Select Category —</option>
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>Selling Price (₱)</label>
+                  <input type="number" step="0.01" required style={inputStyle}
+                    value={editData.selling_price}
+                    onChange={(e) => setEditData({ ...editData, selling_price: parseFloat(e.target.value) })} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Retail / Cost Price (₱)</label>
+                  <input type="number" step="0.01" required style={inputStyle}
+                    value={editData.retail_price}
+                    onChange={(e) => setEditData({ ...editData, retail_price: parseFloat(e.target.value) })} />
+                </div>
+              </div>
+
+              {/* Footer Styled like UserAccess */}
+              <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: DISCARD CHANGES ── */}
+      {showDiscardModal && (
+        <div className="modal-overlay">
+          <div style={{
+            background: 'white', borderRadius: '10px', width: '380px',
+            maxWidth: '95vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', overflow: 'hidden'
+          }}>
+            {/* Header Styled like UserAccess */}
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Discard Changes?</h3>
+              <button style={{
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={() => setShowDiscardModal(false)}>
+                ✖
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <p style={{ fontSize: '13px', color: '#555', margin: '0 0 20px' }}>
+                Are you sure you want to quit? All unsaved changes will be lost.
+              </p>
+              {/* Footer Styled like UserAccess */}
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px', marginTop: '10px' }}>
+                <button onClick={() => setShowDiscardModal(false)} className="cancel-btn" style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Keep Editing</button>
+                <button onClick={closeFormCompletely} className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Discard</button>
               </div>
             </div>
           </div>

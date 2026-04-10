@@ -4,6 +4,17 @@ import './index.css';
 import logo from './assets/logotrans.png';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+import searchIcon from './assets/supplier_search button.png'; // Added search icon
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
@@ -222,6 +233,11 @@ const Transact = () => {
     p.product_id.toString().includes(searchTerm)
   );
 
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
   return (
     <div className="outer-margin-container">
       {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
@@ -230,14 +246,30 @@ const Transact = () => {
         <aside className="sidebar no-print">
           <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
-            <div className="nav-item active">TRANSACT</div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            <div className="nav-item" onClick={() => navigate('/sales-record')}>
+              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/user-access')}>
+              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+            </div>
+            <div className="nav-item active">
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/generate-report')}>
+              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/suppliers')}>
+              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/clients')}>
+              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+            </div>
           </nav>
           <Logout />
         </aside>
@@ -247,20 +279,32 @@ const Transact = () => {
           {/* LEFT SIDE: Products List */}
           <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
             <header className="main-header" style={{ marginBottom: '20px' }}>
-              <div className="title-area"><h2>Point of Sale</h2></div>
+              <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src={transactIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+                <h2>Point of Sale</h2>
+              </div>
               <div className="admin-info">
                 <p className="real-time-date">{currentTime.toLocaleDateString()} | {currentTime.toLocaleTimeString()}</p>
               </div>
             </header>
 
-            <div style={{ marginBottom: '15px' }}>
+            {/* UPATED SEARCH BAR */}
+            <div style={{ marginBottom: '15px', position: 'relative' }}>
+              <img 
+                src={searchIcon} 
+                alt="Search" 
+                style={{
+                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                  width: '20px', height: '20px', pointerEvents: 'none'
+                }} 
+              />
               <input 
                 type="text" 
-                placeholder="Search products or SCAN BARCODE (Press Enter)..." 
+                placeholder="Search products or scan barcode..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleBarcodeScan}
-                style={{ width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid #d32f2f', fontSize: '16px', outline: 'none' }}
+                style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '4px', border: '1px solid #d32f2f', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }}
                 autoFocus
               />
             </div>

@@ -4,7 +4,7 @@ import logo from './assets/logotrans.png';
 import './index.css';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://127.0.0.1:5000' 
+  ? 'http://127.0.0.1:5000'
   : 'https://ergin-hardware.onrender.com';
 
 function LoginPage() {
@@ -14,6 +14,7 @@ function LoginPage() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
@@ -22,9 +23,21 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+    // Clear previous error
+    setPasswordError('');
+
+    // Password Validation Rules
+    const hasMinLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    // Check if password meets all requirements
+    if (!hasMinLength || !hasUpperCase || !hasNumber) {
+      setPasswordError('Password must be at least 8 characters and include at least one uppercase letter and one number.');
+      return; // Stop login process if validation fails
+    }
+
     try {
-      // 1. Send Username/Password to Backend
-      // Notice we are sending keys 'username' and 'password' to match Python
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,9 +50,6 @@ function LoginPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // 2. Login Success!
-        
-        // Save the Role and Username to the browser
         localStorage.setItem('currentUser', data.username);
         localStorage.setItem('currentRole', data.role);
 
@@ -75,10 +85,10 @@ function LoginPage() {
             
             <form onSubmit={handleLogin}>
               <div className="input-field">
-                <label>NAME</label>
+                <label>USERNAME</label>
                 <input 
                   type="text" 
-                  placeholder="Enter your name"
+                  placeholder="Enter your username"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required 
@@ -99,13 +109,19 @@ function LoginPage() {
                     {passwordVisible ? "👁" : "⌣"}
                   </span>
                 </div>
+                {/* Validation Error Display */}
+                {passwordError && (
+                  <p style={{ color: '#d10000', fontSize: '11px', marginTop: '5px', textAlign: 'left', lineHeight: '1.3' }}>
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               <button type="submit" className="login-btn">LOG IN</button>
             </form>
 
             <div className="footer">
-              © 2008 Ergin Hardware and Construction Supply Trading.
+              © {new Date().getFullYear()} Ergin Hardware and Construction Supply Trading.
             </div>
           </div>
         </div>
@@ -133,7 +149,7 @@ function LoginPage() {
                       </button>
               </div>
               <div className="error-body">
-                <p>The name or password you entered is incorrect.</p>
+                <p>The username or password you entered is incorrect.</p>
                 <button className="try-again-btn" onClick={() => setShowError(false)}>
                   Try Again
                 </button>

@@ -5,9 +5,22 @@ import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+import searchIcon from './assets/supplier_search button.png';
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
+
+const ROWS_PER_PAGE = 8; 
 
 const UserAccess = () => {
   const navigate = useNavigate();
@@ -17,12 +30,21 @@ const UserAccess = () => {
   const [employees, setEmployees] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false); 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [currentPage, setCurrentPage] = useState(1); 
+  const [formError, setFormError] = useState('');
+  const [activeDropdown, setActiveDropdown] = useState(null);
 
   // Form Data for New User
   const [formData, setFormData] = useState({
     name: '', contact: '', email: '', address: '', 
     username: '', password: '', role: 'Cashier'
+  });
+
+  // Form Data for Editing User
+  const [editData, setEditData] = useState({
+    employee_id: '', name: '', contact: '', username: '', password: '', role: 'Cashier'
   });
 
   // Effects
@@ -38,13 +60,36 @@ const UserAccess = () => {
       const response = await fetch(`${API_URL}/api/employees`);
       if (response.ok) {
         const data = await response.json();
-        setEmployees(data);
+        const formattedData = data.map(emp => ({
+          ...emp,
+          status: emp.status || 'Active'
+        }));
+        setEmployees(formattedData);
       }
     } catch (error) { console.error("Error fetching employees:", error); }
   };
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
+    setFormError(''); 
+
+    const usernameExists = employees.some(
+      (emp) => emp.username.toLowerCase() === formData.username.toLowerCase()
+    );
+    if (usernameExists) {
+      setFormError('Username is already taken. Please choose another one.');
+      return; 
+    }
+
+    const hasMinLength = formData.password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
+
+    if (!hasMinLength || !hasUpperCase || !hasNumber) {
+      setFormError('Password must be at least 8 characters and include at least one uppercase letter and one number.');
+      return; 
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/employees`, {
         method: 'POST',
@@ -55,12 +100,57 @@ const UserAccess = () => {
       if (response.ok) {
         triggerToast("New user account created successfully!");
         fetchEmployees(); 
-        setShowModal(false);
-        setFormData({ name: '', contact: '', email: '', address: '', username: '', password: '', role: 'Cashier' });
+        closeModal(); 
       } else {
         alert("Failed to create user. Check terminal.");
       }
     } catch (error) { console.error("Error saving user:", error); }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    const usernameExists = employees.some(
+      (emp) => emp.username.toLowerCase() === editData.username.toLowerCase() && emp.employee_id !== editData.employee_id
+    );
+    if (usernameExists) {
+      setFormError('Username is already taken by another employee.');
+      return; 
+    }
+
+    if (editData.password !== '') {
+      const hasMinLength = editData.password.length >= 8;
+      const hasUpperCase = /[A-Z]/.test(editData.password);
+      const hasNumber = /[0-9]/.test(editData.password);
+
+      if (!hasMinLength || !hasUpperCase || !hasNumber) {
+        setFormError('New password must be at least 8 characters and include at least one uppercase letter and one number.');
+        return; 
+      }
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/employees/${editData.employee_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData)
+      });
+
+      if (response.ok) {
+        triggerToast("Staff account updated successfully!");
+        fetchEmployees(); 
+        setShowEditModal(false);
+      } else {
+        alert("Failed to update user.");
+      }
+    } catch (error) { console.error("Error updating user:", error); }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setFormError('');
+    setFormData({ name: '', contact: '', email: '', address: '', username: '', password: '', role: 'Cashier' });
   };
 
   const triggerToast = (message, type = 'success') => {
@@ -68,11 +158,62 @@ const UserAccess = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  // Filter
+  const toggleStatus = (employeeId) => {
+    setEmployees(prevEmployees => 
+      prevEmployees.map(emp => {
+        if (emp.employee_id === employeeId) {
+          return { ...emp, status: emp.status === 'Active' ? 'Inactive' : 'Active' };
+        }
+        return emp;
+      })
+    );
+  };
+
+  const handleEdit = (employee) => {
+    setEditData({
+      employee_id: employee.employee_id,
+      name: employee.name,
+      contact: employee.contact,
+      username: employee.username,
+      password: '', 
+      role: employee.role
+    });
+    setFormError('');
+    setShowEditModal(true);
+    setActiveDropdown(null);
+  };
+
+  const handleArchive = (employeeId) => {
+    alert(`Archive functionality for Employee ID: ${employeeId} coming soon!`);
+    setActiveDropdown(null);
+  };
+
   const filteredEmployees = employees.filter(e => 
     e.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     e.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredEmployees.length / ROWS_PER_PAGE);
+  const paginatedEmployees = filteredEmployees.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); 
+  };
+
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
+  const getRoleColor = (role) => {
+    if (role === 'Administrator' || role === 'Admin') return '#d10000'; 
+    if (role === 'Supervisor') return '#850000'; 
+    return '#4a4a4a'; 
+  };
 
   return (
     <div className="outer-margin-container">
@@ -80,79 +221,166 @@ const UserAccess = () => {
 
       <div className="connected-border-box">
         
-        {/* Sidebar */}
         <aside className="sidebar">
           <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item active">USER ACCESS</div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            <div className="nav-item" onClick={() => navigate('/sales-record')}>
+              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+            </div>
+            <div className="nav-item active">
+              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/transact')}>
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/generate-report')}>
+              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/suppliers')}>
+              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/clients')}>
+              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+            </div>
           </nav>
           <Logout />
         </aside>
 
-        {/* Main Content */}
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2>User & Staff Management</h2></div>
+            <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src={userAccessIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+              <h2 style={{ margin: 0 }}>User & Staff Management</h2>
+            </div>
             <TopHeader />
           </header>
 
           <hr className="divider" />
 
-          {/* Controls */}
-          <div className="supplier-controls" style={{ marginBottom: '20px' }}>
-            <div className="search-wrapper">
+          {/* Compressed margin to save vertical space matching Sales Ledger */}
+          <div className="supplier-controls" style={{ marginBottom: '16px' }}>
+            <div className="search-wrapper" style={{ position: 'relative' }}>
+              <img 
+                src={searchIcon} 
+                alt="Search" 
+                style={{
+                  position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                  width: '18px', height: '18px', pointerEvents: 'none'
+                }} 
+              />
               <input 
                 type="text" 
                 placeholder="Search staff..." 
                 className="search-input" 
                 value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
+                onChange={handleSearchChange} 
+                style={{ paddingLeft: '36px' }} 
               />
             </div>
             <button className="add-supplier-btn" onClick={() => setShowModal(true)}>+ Add Staff Account</button>
           </div>
 
-          {/* Users Table */}
           <div className="table-container shadow-box">
             <table className="inventory-table">
               <thead>
                 <tr>
-                  <th>Emp ID</th>
-                  <th>Full Name</th>
-                  <th>Role</th>
-                  <th>Username</th>
-                  <th>Contact Number</th>
-                  <th>Status</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Emp ID</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Full Name</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Role</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Username</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Contact Number</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Status</th>
+                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((emp) => (
+                {paginatedEmployees.map((emp) => (
                   <tr key={emp.employee_id}>
                     <td>{emp.employee_id}</td>
                     <td style={{ fontWeight: 'bold' }}>{emp.name}</td>
                     <td>
+                      {/* Tighter padding on the role badge to save vertical row height */}
                       <span style={{ 
-                        background: emp.role === 'Admin' ? '#8e44ad' : '#2980b9', 
-                        color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold'
+                        background: getRoleColor(emp.role), 
+                        color: 'white', padding: '3px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold'
                       }}>
                         {emp.role}
                       </span>
                     </td>
                     <td>{emp.username}</td>
                     <td>{emp.contact}</td>
-                    <td style={{ color: '#27ae60', fontWeight: 'bold' }}>Active</td>
+                    <td>
+                      {/* Tighter padding on the status button to prevent scrollbars */}
+                      <button 
+                        onClick={() => toggleStatus(emp.employee_id)}
+                        style={{
+                          padding: '4px 10px', 
+                          borderRadius: '4px', 
+                          border: 'none',
+                          fontWeight: 'bold', 
+                          color: 'white', 
+                          cursor: 'pointer', 
+                          fontSize: '12px',
+                          background: emp.status === 'Active' ? '#27ae60' : '#d10000', 
+                          width: '75px' 
+                        }}
+                      >
+                        {emp.status}
+                      </button>
+                    </td>
+                    <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
+                      {/* Compressed action button to keep row heights uniform with other pages */}
+                      <button
+                        onClick={() => setActiveDropdown(activeDropdown === emp.employee_id ? null : emp.employee_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#7f8c8d', padding: '0 8px', lineHeight: '1' }}
+                      >
+                        ⋮
+                      </button>
+
+                      {activeDropdown === emp.employee_id && (
+                        <>
+                          <div
+                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                            onClick={() => setActiveDropdown(null)}
+                          />
+                          <div style={{
+                            position: 'absolute', right: '40px', top: '25px',
+                            background: 'white', border: '1px solid #e0e0e0',
+                            borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                            zIndex: 10, display: 'flex', flexDirection: 'column',
+                            width: '130px', overflow: 'hidden'
+                          }}>
+                            <button
+                              onClick={() => handleEdit(emp)}
+                              style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                              onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
+                              onMouseOut={(e) => e.target.style.background = 'white'}
+                            >
+                               Edit
+                            </button>
+                            <button
+                              onClick={() => handleArchive(emp.employee_id)}
+                              style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
+                              onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
+                              onMouseOut={(e) => e.target.style.background = 'white'}
+                            >
+                               Archive
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </td>
                   </tr>
                 ))}
-                {filteredEmployees.length === 0 && (
+                {paginatedEmployees.length === 0 && (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: '#7f8c8d' }}>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#7f8c8d' }}>
                       No staff accounts found.
                     </td>
                   </tr>
@@ -160,42 +388,84 @@ const UserAccess = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Uniform Pagination lowered beautifully into the bottom space */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? '#eee' : '#d10000',
+                  color: currentPage === 1 ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                ← Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    background: currentPage === page ? '#d10000' : 'white',
+                    color: currentPage === page ? 'white' : '#333',
+                    border: '1px solid #ddd', borderRadius: '4px',
+                    padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold',
+                    minWidth: '34px'
+                  }}>
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? '#eee' : '#d10000',
+                  color: currentPage === totalPages ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                Next →
+              </button>
+
+              <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                Page {currentPage} of {totalPages} ({filteredEmployees.length} records)
+              </span>
+            </div>
+          )}
+
         </main>
       </div>
 
       {/* --- ADD USER MODAL --- */}
       {showModal && (
         <div className="modal-overlay">
-          <div className="add-user-modal" style={{ maxWidth: '600px' }}>
-            <div className="modal-header-red">
-              <h3>Create Staff Account</h3>
+          <div className="add-user-modal" style={{ maxWidth: '600px', background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Create Staff Account</h3>
               <button style={{
-                        background: '#f1f2f6',
-                        color: '#333',
-                        border: '1px solid #bdc3c7',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        padding: '4px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }} className="close-x" onClick={() => setShowModal(false)}>
-                        ✖
-                      </button>
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={closeModal}>
+                ✖
+              </button>
             </div>
-            <form onSubmit={handleSaveUser} className="modal-form">
-              
-              <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', color: '#2c3e50' }}>1. Personal Information</h4>
+
+            <form onSubmit={handleSaveUser} className="modal-form" autoComplete="off" style={{ padding: '20px' }}>
+              <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', color: '#2c3e50', marginTop: 0 }}>1. Personal Information</h4>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 2 }}>
                   <label>Full Name</label>
-                  <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} autoComplete="off" />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Contact Number</label>
-                  <input type="text" required value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+                  <input type="text" required value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} autoComplete="off" />
                 </div>
               </div>
 
@@ -203,24 +473,90 @@ const UserAccess = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Username</label>
-                  <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
+                  <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} autoComplete="new-username" />
                 </div>
                 <div className="form-group">
                   <label>Password</label>
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                  <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} autoComplete="new-password" />
                 </div>
                 <div className="form-group">
                   <label>System Role</label>
                   <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
                     <option value="Cashier">Cashier</option>
-                    <option value="Admin">Administrator</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Administrator">Administrator</option>
                   </select>
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="submit" className="save-btn">Create Account</button>
-                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
+              {formError && (
+                <div style={{ color: '#d10000', fontSize: '12px', fontWeight: 'bold', background: '#ffebeb', padding: '10px', borderRadius: '4px', border: '1px solid #ffcccc', marginTop: '15px' }}>
+                  {formError}
+                </div>
+              )}
+
+              <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+                <button type="button" className="cancel-btn" onClick={closeModal} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Account</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT USER MODAL --- */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="add-user-modal" style={{ maxWidth: '600px', background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
+            
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Edit Staff Account</h3>
+              <button style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="close-x" onClick={() => setShowEditModal(false)}>✖</button>
+            </div>
+
+            <form onSubmit={handleUpdateUser} className="modal-form" autoComplete="off" style={{ padding: '20px' }}>
+              
+              <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', color: '#2c3e50', marginTop: 0 }}>1. Personal Information</h4>
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label>Full Name</label>
+                  <input type="text" required value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} autoComplete="off" />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Contact Number</label>
+                  <input type="text" required value={editData.contact} onChange={(e) => setEditData({...editData, contact: e.target.value})} autoComplete="off" />
+                </div>
+              </div>
+
+              <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', color: '#2c3e50', marginTop: '15px' }}>2. System Login Credentials</h4>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Username</label>
+                  <input type="text" required value={editData.username} onChange={(e) => setEditData({...editData, username: e.target.value})} autoComplete="new-username" />
+                </div>
+                <div className="form-group">
+                  <label>New Password (Optional)</label>
+                  <input type="password" placeholder="Leave blank to keep current" value={editData.password} onChange={(e) => setEditData({...editData, password: e.target.value})} autoComplete="new-password" />
+                </div>
+                <div className="form-group">
+                  <label>System Role</label>
+                  <select value={editData.role} onChange={(e) => setEditData({...editData, role: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                    <option value="Cashier">Cashier</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Administrator">Administrator</option>
+                  </select>
+                </div>
+              </div>
+
+              {formError && (
+                <div style={{ color: '#d10000', fontSize: '12px', fontWeight: 'bold', background: '#ffebeb', padding: '10px', borderRadius: '4px', border: '1px solid #ffcccc', marginTop: '15px' }}>
+                  {formError}
+                </div>
+              )}
+
+              <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Changes</button>
               </div>
             </form>
           </div>

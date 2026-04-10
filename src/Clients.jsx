@@ -5,14 +5,28 @@ import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
 import Logout from './Logout';
 
+// Sidebar nav icons
+import dashboardIcon from './assets/dashboard_header icon.png';
+import inventoryIcon from './assets/inventory_header icon.png';
+import salesRecordIcon from './assets/salesrecord_header icon.png';
+import userAccessIcon from './assets/useracess_header icon.png';
+import transactIcon from './assets/transact_pos header.png';
+import generateReportIcon from './assets/generate report_ header icon.png';
+import supplierIcon from './assets/supplier_header icon.png';
+import clientIcon from './assets/client_header icon.png';
+import searchIcon from './assets/supplier_search button.png'; // Added search icon import
+
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
+
+const ROWS_PER_PAGE = 8; // Pagination constant
 
 const Clients = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1); // Pagination state
 
   // --- MODAL & ACTION STATES ---
   const [showModal, setShowModal] = useState(false);
@@ -84,42 +98,118 @@ const Clients = () => {
     setFormData({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   };
 
+  // --- FILTER & PAGINATION LOGIC ---
   const filteredClients = clients.filter(c =>
     (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const totalPages = Math.ceil(filteredClients.length / ROWS_PER_PAGE);
+  const paginatedClients = filteredClients.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 when searching
+  };
+
+  const navIconStyle = {
+    width: '20px', height: '20px', marginRight: '8px',
+    objectFit: 'contain', verticalAlign: 'middle'
+  };
+
   return (
     <div className="outer-margin-container">
-      {toast.show && <div className={`toast-notification ${toast.type}`}>{toast.message}</div>}
+      
+      {/* FIXED TOAST NOTIFICATION: Styled to match system theme */}
+      {toast.show && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: '30px', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 10000,
+            background: toast.type === 'error' ? '#990000' : '#d10000', 
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(209, 0, 0, 0.25)', 
+            fontWeight: 'bold',
+            fontSize: '14px',
+            textAlign: 'center',
+            minWidth: '200px',
+            border: '1px solid #b30000'
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
 
       <div className="connected-border-box">
         <aside className="sidebar">
           <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
           <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>DASHBOARD</div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>INVENTORY</div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>SALES RECORD</div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>USER ACCESS</div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>TRANSACT</div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>GENERATE REPORT</div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>SUPPLIERS</div>
-            <div className="nav-item active">CLIENTS</div>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/inventory')}>
+              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
+            </div>
+            <div className="nav-item" onClick={() => navigate('/sales-record')}>
+              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
+            </div>
+            <div className="nav-item" onClick={() => navigate('/user-access')}>
+              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
+            </div>
+            <div className="nav-item" onClick={() => navigate('/transact')}>
+              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/generate-report')}>
+              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
+            </div>
+            <div className="nav-item" onClick={() => navigate('/suppliers')}>
+              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
+            </div>
+            <div className="nav-item active">
+              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
+            </div>
           </nav>
           <Logout />
         </aside>
 
         <main className="dashboard-content">
           <header className="main-header">
-            <div className="title-area"><h2>Client Management</h2></div>
+            <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src={clientIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+              <h2 style={{ margin: 0 }}>Client Management</h2>
+            </div>
             <TopHeader />
           </header>
 
           <hr className="divider" />
 
-          <div className="supplier-controls">
-            <div className="search-wrapper">
-              <input type="text" placeholder="Search clients..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="supplier-controls" style={{ marginBottom: '16px' }}>
+            {/* Search Bar with Icon */}
+            <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
+              <img 
+                src={searchIcon} 
+                alt="Search" 
+                style={{
+                  position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                  width: '18px', height: '18px', pointerEvents: 'none'
+                }} 
+              />
+              <input 
+                type="text" 
+                placeholder="Search clients..." 
+                className="search-input" 
+                value={searchTerm} 
+                onChange={handleSearchChange} 
+                style={{ paddingLeft: '36px', width: '100%' }} 
+              />
             </div>
             <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Client</button>
           </div>
@@ -128,26 +218,27 @@ const Clients = () => {
             <table className="supplier-table">
               <thead>
                 <tr>
-                  <th>Client ID</th>
-                  <th>Client Name</th>
-                  <th>Contact</th>
-                  <th>Email</th>
-                  <th>Address</th>
-                  <th>Business Style</th>
-                  <th>TIN</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Client ID</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Client Name</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Contact</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Email</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Address</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>Business Style</th>
+                  <th style={{ fontWeight: 'bold', color: '#333' }}>TIN</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredClients.length > 0 ? (
-                  filteredClients.map((c) => (
+                {/* Mapping over paginatedClients instead of raw clients array */}
+                {paginatedClients.length > 0 ? (
+                  paginatedClients.map((c) => (
                     <tr key={c.customer_id}>
-                      <td>{c.customer_id}</td>
-                      <td style={{ fontWeight: 'bold' }}>{c.name}</td>
-                      <td>{c.contact}</td>
-                      <td>{c.email}</td>
-                      <td>{c.address}</td>
-                      <td>{c.business_style}</td>
-                      <td>{c.tin}</td>
+                      <td style={{ padding: '12px' }}>{c.customer_id}</td>
+                      <td style={{ fontWeight: 'bold', padding: '12px' }}>{c.name}</td>
+                      <td style={{ padding: '12px' }}>{c.contact}</td>
+                      <td style={{ padding: '12px' }}>{c.email}</td>
+                      <td style={{ padding: '12px' }}>{c.address}</td>
+                      <td style={{ padding: '12px' }}>{c.business_style}</td>
+                      <td style={{ padding: '12px' }}>{c.tin}</td>
                     </tr>
                   ))
                 ) : (
@@ -158,6 +249,55 @@ const Clients = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Uniform Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? '#eee' : '#d10000',
+                  color: currentPage === 1 ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                ← Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    background: currentPage === page ? '#d10000' : 'white',
+                    color: currentPage === page ? 'white' : '#333',
+                    border: '1px solid #ddd', borderRadius: '4px',
+                    padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold',
+                    minWidth: '34px'
+                  }}>
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? '#eee' : '#d10000',
+                  color: currentPage === totalPages ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                Next →
+              </button>
+
+              <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                Page {currentPage} of {totalPages} ({filteredClients.length} records)
+              </span>
+            </div>
+          )}
+
         </main>
       </div>
 
