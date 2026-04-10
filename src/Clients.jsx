@@ -30,8 +30,15 @@ const Clients = () => {
 
   // --- MODAL & ACTION STATES ---
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false); // ADDED
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [activeDropdown, setActiveDropdown] = useState(null); // ADDED
+
+  const [showEditDiscardModal, setShowEditDiscardModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [originalEditData, setOriginalEditData] = useState(null);
 
   // --- DATA STATE ---
   const [clients, setClients] = useState([]);
@@ -39,6 +46,11 @@ const Clients = () => {
   // Matches the 'customer' table columns
   const [formData, setFormData] = useState({
     name: '', address: '', contact: '', email: '', business_style: '', tin: ''
+  });
+
+  // Edit form data — ADDED
+  const [editData, setEditData] = useState({
+    customer_id: '', name: '', address: '', contact: '', email: '', business_style: '', tin: ''
   });
 
   // --- EFFECTS ---
@@ -80,6 +92,28 @@ const Clients = () => {
     }
   };
 
+  // ADDED: Handle update client
+  const handleUpdateClient = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_URL}/api/clients/${editData.customer_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData)
+      });
+
+      if (response.ok) {
+        triggerToast("Client updated successfully!");
+        fetchClients();
+        setShowEditModal(false);
+      } else {
+        alert("Failed to update client. Check Flask terminal.");
+      }
+    } catch (error) {
+      console.error("Error updating client:", error);
+    }
+  };
+
   // --- HELPERS ---
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -97,6 +131,54 @@ const Clients = () => {
     setShowDiscardModal(false);
     setFormData({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   };
+
+  // ADDED: Open edit modal
+const handleEdit = (client) => {
+  const data = {
+    customer_id: client.customer_id,
+    name: client.name,
+    address: client.address,
+    contact: client.contact,
+    email: client.email,
+    business_style: client.business_style,
+    tin: client.tin
+  };
+  setEditData(data);
+  setOriginalEditData(data);
+  setShowEditModal(true);
+  setActiveDropdown(null);
+};
+
+  // ADDED: Archive handler
+const handleArchive = (client) => {
+  setSelectedClient(client);
+  setShowArchiveModal(true);
+  setActiveDropdown(null);
+};
+
+const handleArchiveSubmit = () => {
+  // Archive API logic goes here
+  triggerToast(`${selectedClient.name} has been archived.`);
+  setShowArchiveModal(false);
+  setSelectedClient(null);
+};
+
+const handleEditCloseAttempt = () => {
+  const isDirty =
+    editData.name !== originalEditData.name ||
+    editData.address !== originalEditData.address ||
+    editData.contact !== originalEditData.contact ||
+    editData.email !== originalEditData.email ||
+    editData.business_style !== originalEditData.business_style ||
+    editData.tin !== originalEditData.tin;
+  if (isDirty) setShowEditDiscardModal(true);
+  else setShowEditModal(false);
+};
+
+const closeEditFormCompletely = () => {
+  setShowEditDiscardModal(false);
+  setShowEditModal(false);
+};
 
   // --- FILTER & PAGINATION LOGIC ---
   const filteredClients = clients.filter(c =>
@@ -225,10 +307,10 @@ const Clients = () => {
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Address</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Business Style</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>TIN</th>
+                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>{/* ADDED */}
                 </tr>
               </thead>
               <tbody>
-                {/* Mapping over paginatedClients instead of raw clients array */}
                 {paginatedClients.length > 0 ? (
                   paginatedClients.map((c) => (
                     <tr key={c.customer_id}>
@@ -239,11 +321,54 @@ const Clients = () => {
                       <td style={{ padding: '12px' }}>{c.address}</td>
                       <td style={{ padding: '12px' }}>{c.business_style}</td>
                       <td style={{ padding: '12px' }}>{c.tin}</td>
+
+                      {/* ADDED: Action dropdown column */}
+                      <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible', padding: '12px' }}>
+                        <button
+                          onClick={() => setActiveDropdown(activeDropdown === c.customer_id ? null : c.customer_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#7f8c8d', padding: '0 8px', lineHeight: '1' }}
+                        >
+                          ⋮
+                        </button>
+
+                        {activeDropdown === c.customer_id && (
+                          <>
+                            <div
+                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                              onClick={() => setActiveDropdown(null)}
+                            />
+                            <div style={{
+                              position: 'absolute', right: '40px', top: '25px',
+                              background: 'white', border: '1px solid #e0e0e0',
+                              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                              zIndex: 10, display: 'flex', flexDirection: 'column',
+                              width: '130px', overflow: 'hidden'
+                            }}>
+                              <button
+                                onClick={() => handleEdit(c)}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                 Edit
+                              </button>
+                              <button
+                                onClick={() => handleArchive(c.customer_id)}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
+                                onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
+                                onMouseOut={(e) => e.target.style.background = 'white'}
+                              >
+                                 Archive
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No clients found. Add one above!</td>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>No clients found. Add one above!</td>
                   </tr>
                 )}
               </tbody>
@@ -363,23 +488,134 @@ const Clients = () => {
         </div>
       )}
 
+      {/* --- Edit CLIENT MODAL --- ADDED */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="add-user-modal">
+            <div className="modal-header-red">
+              <h3>Edit Client</h3>
+              <button style={{
+                        background: '#f1f2f6',
+                        color: '#333',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }} className="close-x" onClick={() => handleEditCloseAttempt(false)}>
+                        ✖
+                      </button>
+            </div>
+            <form onSubmit={handleUpdateClient} className="modal-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Client Name / Company</label>
+                  <input type="text" required value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Contact Number</label>
+                  <input type="text" required value={editData.contact} onChange={(e) => setEditData({...editData, contact: e.target.value})} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" value={editData.email} onChange={(e) => setEditData({...editData, email: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Business Style</label>
+                  <input type="text" value={editData.business_style} onChange={(e) => setEditData({...editData, business_style: e.target.value})} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Address</label>
+                  <input type="text" required value={editData.address} onChange={(e) => setEditData({...editData, address: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>TIN (Tax ID)</label>
+                  <input type="text" value={editData.tin} onChange={(e) => setEditData({...editData, tin: e.target.value})} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="submit" className="save-btn">Save Changes</button>
+                <button type="button" className="cancel-btn" onClick={() => handleEditCloseAttempt(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- DISCARD CHANGES MODAL --- */}
       {showDiscardModal && (
         <div className="modal-overlay alert-overlay">
           <div className="delete-confirm-modal">
-            <div className="modal-header-red"><h3>Discard Changes?</h3></div>
+            <div className="modal-header-red"><h3>Cancel Adding New Client?</h3>
+            <button style={{
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={() => setShowDiscardModal(false)}>
+                ✖
+              </button></div>
             <div className="delete-modal-body">
-              <p>Are you sure you want to quit editing?</p>
+              <p>You have unsaved details. All entered information will be discarded.</p>
               <div className="delete-modal-footer">
-                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard Changes</button>
+                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard</button>
                 <button className="cancel-delete-btn" onClick={() => setShowDiscardModal(false)}>Keep Editing</button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── MODAL: DISCARD EDIT CLIENT ── */}
+{showEditDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Editing Client?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved changes. All modifications will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── MODAL: ARCHIVE CLIENT ── */}
+{showArchiveModal && selectedClient && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
+      <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Client?</h3>
+      <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
+        Are you sure you want to archive <strong>{selectedClient.name}</strong>? They will no longer appear in active client lists.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+        <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
+        <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
+
+
 
 export default Clients;

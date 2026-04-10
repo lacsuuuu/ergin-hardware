@@ -47,6 +47,9 @@ const Inventory = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showEditDiscardModal, setShowEditDiscardModal] = useState(false);
+  const [originalEditData, setOriginalEditData] = useState(null); 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('');
@@ -119,6 +122,17 @@ const Inventory = () => {
     }
   };
 
+  const handleArchiveSubmit = async () => {
+    try {
+      // Logic for archiving API call would go here
+      triggerToast(`${selectedProduct.product_name} archived successfully.`);
+      setShowArchiveModal(false);
+      fetchInventory();
+    } catch (error) {
+      console.error("Archive error:", error);
+    }
+  };
+
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
@@ -135,15 +149,39 @@ const Inventory = () => {
     setFormData({ name: '', category: '', retail_price: 0, selling_price: 0 });
   };
 
-  const openEditModal = (product) => {
-    setEditData({
-      id: product.product_id,
-      name: product.product_name,
-      category: product.category,
-      retail_price: product.retail_price || 0,
-      selling_price: product.selling_price || 0
-    });
-    setShowEditModal(true);
+const openEditModal = (product) => {
+  const data = {
+    id: product.product_id,
+    name: product.product_name,
+    category: product.category,
+    retail_price: product.retail_price || 0,
+    selling_price: product.selling_price || 0
+  };
+  setEditData(data);
+  setOriginalEditData(data); // <-- save original
+  setShowEditModal(true);
+  setActiveDropdown(null);
+};
+
+const handleEditCloseAttempt = () => {
+  const isDirty =
+    editData.name !== originalEditData.name ||
+    editData.category !== originalEditData.category ||
+    editData.retail_price !== originalEditData.retail_price ||
+    editData.selling_price !== originalEditData.selling_price;
+
+  if (isDirty) setShowEditDiscardModal(true);
+  else setShowEditModal(false);
+};
+
+const closeEditFormCompletely = () => {
+  setShowEditDiscardModal(false);
+  setShowEditModal(false);
+};
+
+const openArchiveModal = (product) => {
+    setSelectedProduct(product);
+    setShowArchiveModal(true);
     setActiveDropdown(null);
   };
 
@@ -157,11 +195,6 @@ const Inventory = () => {
       unit: 'pcs'
     });
     setShowBatchReport(true);
-    setActiveDropdown(null);
-  };
-
-  const handleArchive = (productId) => {
-    alert(`Archive functionality for Product ID: ${productId} coming soon!`);
     setActiveDropdown(null);
   };
 
@@ -397,14 +430,9 @@ const Inventory = () => {
                               >
                                  Batches
                               </button>
-                              <button
-                                onClick={() => handleArchive(product.product_id)}
-                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
-                                onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
-                                onMouseOut={(e) => e.target.style.background = 'white'}
-                              >
-                                 Archive
-                              </button>
+                              <button onClick={() => openArchiveModal(product)} style={{ padding: '10px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
+                                >Archive
+                                </button>
                             </div>
                           </>
                         )}
@@ -573,7 +601,7 @@ const Inventory = () => {
                   borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
                   fontWeight: 'bold', padding: '4px 8px', display: 'flex',
                   alignItems: 'center', justifyContent: 'center'
-                }} className="close-x" onClick={() => setShowEditModal(false)}>
+                }} className="close-x" onClick={() => handleEditCloseAttempt(false)}>
                 ✖
               </button>
             </div>
@@ -613,7 +641,7 @@ const Inventory = () => {
 
               {/* Footer Styled like UserAccess */}
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
-                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => handleEditCloseAttempt(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
                 <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Changes</button>
               </div>
             </form>
@@ -621,39 +649,69 @@ const Inventory = () => {
         </div>
       )}
 
+            {/* ── MODAL: ARCHIVE VALIDATION ── */}
+      {showArchiveModal && selectedProduct && (
+        <div className="modal-overlay alert-overlay">
+          <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
+            <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Product?</h3>
+            <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
+              Are you sure you want to archive <strong>{selectedProduct.product_name}</strong>? It will no longer appear in active inventory lists.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+              <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
+              <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL: DISCARD CHANGES ── */}
       {showDiscardModal && (
-        <div className="modal-overlay">
-          <div style={{
-            background: 'white', borderRadius: '10px', width: '380px',
-            maxWidth: '95vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', overflow: 'hidden'
-          }}>
-            {/* Header Styled like UserAccess */}
-            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Discard Changes?</h3>
-              <button style={{
+        <div className="modal-overlay alert-overlay">
+          <div className="delete-confirm-modal">
+            <div className="modal-header-red"><h3>Cancel Adding New Product?</h3>
+            <button style={{
                   background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
                   borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
                   fontWeight: 'bold', padding: '4px 8px', display: 'flex',
                   alignItems: 'center', justifyContent: 'center'
                 }} className="close-x" onClick={() => setShowDiscardModal(false)}>
                 ✖
-              </button>
-            </div>
-
-            <div style={{ padding: '20px' }}>
-              <p style={{ fontSize: '13px', color: '#555', margin: '0 0 20px' }}>
-                Are you sure you want to quit? All unsaved changes will be lost.
-              </p>
-              {/* Footer Styled like UserAccess */}
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px', marginTop: '10px' }}>
-                <button onClick={() => setShowDiscardModal(false)} className="cancel-btn" style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Keep Editing</button>
-                <button onClick={closeFormCompletely} className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Discard</button>
+              </button></div>
+            <div className="delete-modal-body">
+              <p>You have unsaved details. All entered information will be discarded.</p>
+              <div className="delete-modal-footer">
+                <button className="confirm-delete-btn" onClick={closeFormCompletely}>Discard</button>
+                <button className="cancel-delete-btn" onClick={() => setShowDiscardModal(false)}>Keep Editing</button>
               </div>
             </div>
           </div>
         </div>
       )}
+{/* ── MODAL: DISCARD EDIT CHANGES ── */}
+{showEditDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Editing Product?</h3>
+      <button style={{
+            background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+            borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+            fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center'
+          }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>
+          ✖
+        </button></div>
+      <div className="delete-modal-body">
+        <p>You have unsaved changes. All modifications will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };

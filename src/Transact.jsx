@@ -13,7 +13,7 @@ import transactIcon from './assets/transact_pos header.png';
 import generateReportIcon from './assets/generate report_ header icon.png';
 import supplierIcon from './assets/supplier_header icon.png';
 import clientIcon from './assets/client_header icon.png';
-import searchIcon from './assets/supplier_search button.png'; // Added search icon
+import searchIcon from './assets/supplier_search button.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -38,6 +38,9 @@ const Transact = () => {
   const [newClientData, setNewClientData] = useState({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   
   const [invoiceData, setInvoiceData] = useState(null); 
+
+  // --- CHECKOUT MODAL STATES ---
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -93,7 +96,6 @@ const Transact = () => {
       return;
     }
 
-    // NEW: Always pull the selling_price!
     const productPrice = Number(product.selling_price || 0);
     const existingItem = cart.find(item => item.product_id === product.product_id);
     
@@ -185,9 +187,16 @@ const Transact = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
   // --- CHECKOUT LOGIC ---
-  const handleCheckout = async () => {
+  // Step 1: Called when user clicks "Complete Checkout" — shows confirmation popup
+  const handleCheckoutClick = () => {
     if (!selectedClient) { alert("Please select a client first!"); return; }
     if (cart.length === 0) { alert("Cart is empty!"); return; }
+    setShowCheckoutConfirm(true);
+  };
+
+  // Step 2: Called when user confirms — proceeds with actual checkout
+  const handleCheckout = async () => {
+    setShowCheckoutConfirm(false);
 
     const payload = {
       customer_id: selectedClient,
@@ -288,7 +297,7 @@ const Transact = () => {
               </div>
             </header>
 
-            {/* UPATED SEARCH BAR */}
+            {/* SEARCH BAR */}
             <div style={{ marginBottom: '15px', position: 'relative' }}>
               <img 
                 src={searchIcon} 
@@ -313,25 +322,22 @@ const Transact = () => {
               <table className="inventory-table">
                 <thead>
                   <tr>
-                    <th>ID / Barcode</th>
-                    <th>Product</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th style={{ textAlign: 'center' }}>Action</th>
+                     <th style={{ width: '7%'}}>ID / Barcode</th>
+                    <th style={{ width: '10%' }}>Product</th>
+                    <th style={{ width: '5%' }}>Price</th>
+                    <th style={{ width: '10%', textAlign: 'center' }}>Stock</th>
+                    <th style={{ width: '10%', textAlign: 'center' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredInventory.map(p => (
                     <tr key={p.product_id}>
-                      <td>{p.product_id}</td>
+                      <td style={{ textAlign: 'center' }}>{p.product_id}</td>
                       <td style={{ fontWeight: 'bold' }}>{p.product_name}</td>
-                      
-                      {/* NEW: Displays selling_price with 2 decimals */}
                       <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>
                         ₱{Number(p.selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </td>
-                      
-                      <td style={{ color: p.stock > 0 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }}>{p.stock}</td>
+                      <td style={{ textAlign: 'center', color: p.stock > 0 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }}>{p.stock}</td>
                       <td style={{ textAlign: 'center' }}>
                         <button 
                           onClick={() => addToCart(p)}
@@ -390,7 +396,6 @@ const Transact = () => {
                       </div>
                     </div>
                     
-                    {/* NEW: The + / - Custom Quantity Buttons */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', background: '#f1f2f6', border: '1px solid #bdc3c7', borderRadius: '4px', overflow: 'hidden' }}>
                         <button onClick={() => handleCartMinus(item.product_id)} style={{ padding: '4px 10px', background: '#e0e0e0', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>-</button>
@@ -422,7 +427,7 @@ const Transact = () => {
               </div>
               
               <button 
-                onClick={handleCheckout}
+                onClick={handleCheckoutClick}
                 disabled={cart.length === 0}
                 style={{ width: '100%', background: cart.length > 0 ? '#ac372f' : '#bdc3c7', color: '#fff', border: 'none', padding: '15px', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: cart.length > 0 ? 'pointer' : 'not-allowed' }}
               >
@@ -476,6 +481,43 @@ const Transact = () => {
                 <button type="button" className="cancel-btn" onClick={() => setShowNewClientModal(false)}>Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: CHECKOUT CONFIRMATION (Step 1) --- */}
+      {showCheckoutConfirm && (
+        <div className="modal-overlay no-print" style={{ zIndex: 9998 }}>
+          <div className="add-user-modal" style={{ maxWidth: '380px', padding: '0', borderRadius: '8px', overflow: 'hidden' }}>
+            <div className="modal-header-red">
+              <h3>Confirm Checkout</h3>
+            </div>
+            <div style={{ padding: '24px', background: 'white', textAlign: 'center' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}></div>
+              <p style={{ fontSize: '15px', color: '#2c3e50', marginBottom: '6px' }}>
+                You are about to complete this order.
+              </p>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#ac372f', marginBottom: '20px' }}>
+                Total: ₱{cartTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+              <p style={{ fontSize: '13px', color: '#7f8c8d', marginBottom: '24px' }}>
+                Do you want to proceed with the checkout?
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowCheckoutConfirm(false)}
+                  style={{ padding: '10px 28px', borderRadius: '4px', border: '1px solid #ccc', background: '#f1f2f6', color: '#555', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCheckout}
+                  style={{ padding: '10px 28px', borderRadius: '4px', border: 'none', background: '#ac372f', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                >
+                  Yes, Proceed
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

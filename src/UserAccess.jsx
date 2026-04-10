@@ -36,6 +36,12 @@ const UserAccess = () => {
   const [formError, setFormError] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
 
+  const [showAddDiscardModal, setShowAddDiscardModal] = useState(false);
+  const [showEditDiscardModal, setShowEditDiscardModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [originalEditData, setOriginalEditData] = useState(null);
+
   // Form Data for New User
   const [formData, setFormData] = useState({
     name: '', contact: '', email: '', address: '', 
@@ -169,24 +175,34 @@ const UserAccess = () => {
     );
   };
 
-  const handleEdit = (employee) => {
-    setEditData({
-      employee_id: employee.employee_id,
-      name: employee.name,
-      contact: employee.contact,
-      username: employee.username,
-      password: '', 
-      role: employee.role
-    });
-    setFormError('');
-    setShowEditModal(true);
-    setActiveDropdown(null);
+const handleEdit = (employee) => {
+  const data = {
+    employee_id: employee.employee_id,
+    name: employee.name,
+    contact: employee.contact,
+    username: employee.username,
+    password: '',
+    role: employee.role
   };
+  setEditData(data);
+  setOriginalEditData(data);
+  setFormError('');
+  setShowEditModal(true);
+  setActiveDropdown(null);
+};
 
-  const handleArchive = (employeeId) => {
-    alert(`Archive functionality for Employee ID: ${employeeId} coming soon!`);
-    setActiveDropdown(null);
-  };
+const handleArchive = (employee) => {
+  setSelectedEmployee(employee);
+  setShowArchiveModal(true);
+  setActiveDropdown(null);
+};
+
+const handleArchiveSubmit = () => {
+  // Archive API logic goes here
+  triggerToast(`${selectedEmployee.name} has been archived.`);
+  setShowArchiveModal(false);
+  setSelectedEmployee(null);
+};
 
   const filteredEmployees = employees.filter(e => 
     e.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -203,6 +219,31 @@ const UserAccess = () => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); 
   };
+
+  const handleAddCloseAttempt = () => {
+  const isDirty = formData.name !== '' || formData.contact !== '' ||
+    formData.email !== '' || formData.address !== '' ||
+    formData.username !== '' || formData.password !== '';
+  if (isDirty) setShowAddDiscardModal(true);
+  else closeModal();
+};
+
+const handleEditCloseAttempt = () => {
+  const isDirty =
+    editData.name !== originalEditData.name ||
+    editData.contact !== originalEditData.contact ||
+    editData.username !== originalEditData.username ||
+    editData.password !== '' ||
+    editData.role !== originalEditData.role;
+  if (isDirty) setShowEditDiscardModal(true);
+  else setShowEditModal(false);
+};
+
+const closeEditFormCompletely = () => {
+  setShowEditDiscardModal(false);
+  setShowEditModal(false);
+  setFormError('');
+};
 
   const navIconStyle = {
     width: '20px', height: '20px', marginRight: '8px',
@@ -365,7 +406,7 @@ const UserAccess = () => {
                                Edit
                             </button>
                             <button
-                              onClick={() => handleArchive(emp.employee_id)}
+                              onClick={() => handleArchive(emp)}
                               style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
                               onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                               onMouseOut={(e) => e.target.style.background = 'white'}
@@ -451,7 +492,7 @@ const UserAccess = () => {
                   borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
                   fontWeight: 'bold', padding: '4px 8px', display: 'flex',
                   alignItems: 'center', justifyContent: 'center'
-                }} className="close-x" onClick={closeModal}>
+                }} className="close-x" onClick={handleAddCloseAttempt}>
                 ✖
               </button>
             </div>
@@ -496,7 +537,7 @@ const UserAccess = () => {
               )}
 
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
-                <button type="button" className="cancel-btn" onClick={closeModal} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={handleAddCloseAttempt} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
                 <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Account</button>
               </div>
             </form>
@@ -511,7 +552,7 @@ const UserAccess = () => {
             
             <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '16px' }}>Edit Staff Account</h3>
-              <button style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="close-x" onClick={() => setShowEditModal(false)}>✖</button>
+              <button style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="close-x" onClick={() => handleEditCloseAttempt(false)}>✖</button>
             </div>
 
             <form onSubmit={handleUpdateUser} className="modal-form" autoComplete="off" style={{ padding: '20px' }}>
@@ -555,14 +596,74 @@ const UserAccess = () => {
               )}
 
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
-                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => handleEditCloseAttempt(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
                 <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Changes</button>
               </div>
             </form>
           </div>
         </div>
       )}
+{/* ── MODAL: DISCARD ADD STAFF ── */}
+{showAddDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Adding Staff Account?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowAddDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved details. All entered information will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={() => { setShowAddDiscardModal(false); closeModal(); }}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowAddDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
+{/* ── MODAL: DISCARD EDIT STAFF ── */}
+{showEditDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Editing Staff Account?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved changes. All modifications will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── MODAL: ARCHIVE EMPLOYEE ── */}
+{showArchiveModal && selectedEmployee && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
+      <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Staff Account?</h3>
+      <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
+        Are you sure you want to archive <strong>{selectedEmployee.name}</strong>? Their account will be deactivated and removed from active staff lists.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+        <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
+        <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

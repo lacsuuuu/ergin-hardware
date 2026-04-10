@@ -43,6 +43,12 @@ const Suppliers = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
+  const [showAddDiscardModal, setShowAddDiscardModal] = useState(false);
+  const [showReceiveDiscardModal, setShowReceiveDiscardModal] = useState(false);
+  const [showEditDiscardModal, setShowEditDiscardModal] = useState(false);
+  const [originalEditData, setOriginalEditData] = useState(null);
+
+
   // Form Data 
   const [receiveData, setReceiveData] = useState({
     product_id: '', supplier_name: '', qty_received: '', retail_price: '' 
@@ -143,17 +149,19 @@ const Suppliers = () => {
   };
 
   // --- ACTION HANDLERS ---
-  const openEditModal = (supplier) => {
-    setSelectedSupplier(supplier);
-    setEditData({
-      supplier_name: supplier.supplier_name,
-      contact: supplier.contact,
-      email: supplier.email || '',
-      address: supplier.address
-    });
-    setShowEditModal(true);
-    setActiveDropdown(null);
+const openEditModal = (supplier) => {
+  setSelectedSupplier(supplier);
+  const data = {
+    supplier_name: supplier.supplier_name,
+    contact: supplier.contact,
+    email: supplier.email || '',
+    address: supplier.address
   };
+  setEditData(data);
+  setOriginalEditData(data);
+  setShowEditModal(true);
+  setActiveDropdown(null);
+};
 
   const openArchiveModal = (supplier) => {
     setSelectedSupplier(supplier);
@@ -203,6 +211,47 @@ const Suppliers = () => {
     width: '20px', height: '20px', marginRight: '8px',
     objectFit: 'contain', verticalAlign: 'middle'
   };
+
+  const handleAddCloseAttempt = () => {
+  const isDirty = newSupplierData.name !== '' || newSupplierData.contact !== '' ||
+    newSupplierData.email !== '' || newSupplierData.address !== '';
+  if (isDirty) setShowAddDiscardModal(true);
+  else setShowAddModal(false);
+};
+
+const handleReceiveCloseAttempt = () => {
+  const isDirty = receiveData.product_id !== '' || receiveData.supplier_name !== '' ||
+    receiveData.qty_received !== '' || receiveData.retail_price !== '';
+  if (isDirty) setShowReceiveDiscardModal(true);
+  else setShowReceiveModal(false);
+};
+
+const handleEditCloseAttempt = () => {
+  const isDirty =
+    editData.supplier_name !== originalEditData.supplier_name ||
+    editData.contact !== originalEditData.contact ||
+    editData.email !== originalEditData.email ||
+    editData.address !== originalEditData.address;
+  if (isDirty) setShowEditDiscardModal(true);
+  else setShowEditModal(false);
+};
+
+const closeAddFormCompletely = () => {
+  setShowAddDiscardModal(false);
+  setShowAddModal(false);
+  setNewSupplierData({ name: '', contact: '', email: '', address: '' });
+};
+
+const closeReceiveFormCompletely = () => {
+  setShowReceiveDiscardModal(false);
+  setShowReceiveModal(false);
+  setReceiveData({ product_id: '', supplier_name: '', qty_received: '', retail_price: '' });
+};
+
+const closeEditFormCompletely = () => {
+  setShowEditDiscardModal(false);
+  setShowEditModal(false);
+};
 
   // --- FILTER & PAGINATION LOGIC ---
   const filteredSuppliers = suppliers.filter(s => 
@@ -299,7 +348,7 @@ const Suppliers = () => {
           {/* Controls Area */}
           <div className="inventory-controls" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             
-            {/* UPDATED: Search Bar with Icon */}
+            {/* Search Bar with Icon */}
             <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
               <img 
                 src={searchIcon} 
@@ -320,7 +369,6 @@ const Suppliers = () => {
             </div>
 
             <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>
-              {/* RECEIVE STOCK BUTTON */}
               <button 
                 className="add-product-btn" 
                 style={{ backgroundColor: '#d32f2f' }} 
@@ -328,7 +376,6 @@ const Suppliers = () => {
               >
                 Receive Stock
               </button>
-              {/* ADD SUPPLIER BUTTON */}
               <button 
                 className="add-product-btn" 
                 style={{ backgroundColor: '#d32f2f' }} 
@@ -344,7 +391,6 @@ const Suppliers = () => {
             <table className="inventory-table">
               <thead>
                 <tr>
-                  {/* UPDATED: Bold Table Headers */}
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Supplier ID</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Supplier Name</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Contact</th>
@@ -354,7 +400,6 @@ const Suppliers = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* UPDATED: Mapping over paginatedSuppliers instead of raw suppliers array */}
                 {paginatedSuppliers.length > 0 ? (
                   paginatedSuppliers.map((sup) => (
                     <tr key={sup.supplier_id}>
@@ -364,42 +409,43 @@ const Suppliers = () => {
                       <td>{sup.email || 'N/A'}</td> 
                       <td>{sup.address}</td>
                       
-                      {/* ACTION CELL */}
+                      {/* ACTION CELL — updated to match Clients/UserAccess style */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
-                        <button 
+                        <button
                           onClick={() => setActiveDropdown(activeDropdown === sup.supplier_id ? null : sup.supplier_id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', color: '#7f8c8d' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#7f8c8d', padding: '0 8px', lineHeight: '1' }}
                         >
                           ⋮
                         </button>
 
-                        {/* Dropdown Menu */}
                         {activeDropdown === sup.supplier_id && (
                           <>
-                            <div 
-                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} 
+                            <div
+                              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
                               onClick={() => setActiveDropdown(null)}
                             />
                             <div style={{
-                              position: 'absolute', right: '40px', top: '25px', background: 'white',
-                              border: '1px solid #e0e0e0', borderRadius: '6px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                              zIndex: 10, display: 'flex', flexDirection: 'column', width: '120px', overflow: 'hidden'
+                              position: 'absolute', right: '40px', top: '25px',
+                              background: 'white', border: '1px solid #e0e0e0',
+                              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                              zIndex: 10, display: 'flex', flexDirection: 'column',
+                              width: '130px', overflow: 'hidden'
                             }}>
-                              <button 
+                              <button
                                 onClick={() => openEditModal(sup)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f1f2f6', fontSize: '13px', fontWeight: 'bold', color: '#000' }}
-                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                Edit
+                                 Edit
                               </button>
-                              <button 
+                              <button
                                 onClick={() => openArchiveModal(sup)}
-                                style={{ padding: '10px 15px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', color: '#e74c3c' }}
+                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                Archive
+                                 Archive
                               </button>
                             </div>
                           </>
@@ -416,7 +462,7 @@ const Suppliers = () => {
             </table>
           </div>
 
-          {/* NEW: Uniform Pagination */}
+          {/* Uniform Pagination */}
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
               <button
@@ -486,7 +532,7 @@ const Suppliers = () => {
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}
-                      className="close-x" onClick={() => setShowAddModal(false)}>
+                      className="close-x" onClick={() => handleAddCloseAttempt(false)}>
                         ✖
                         </button>
             </div>
@@ -536,7 +582,7 @@ const Suppliers = () => {
                 <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save Supplier'}
                 </button>
-                <button type="button" className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => handleAddCloseAttempt(false)}>Cancel</button>
               </div>
             </form>
           </div>
@@ -561,7 +607,7 @@ const Suppliers = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
-                      }}className="close-x" onClick={() => setShowReceiveModal(false)}>
+                      }}className="close-x" onClick={() => handleReceiveCloseAttempt(false)}>
                         ✖
                         </button>
             </div>
@@ -591,10 +637,8 @@ const Suppliers = () => {
                     required 
                     value={receiveData.product_id}
                     onChange={(e) => {
-                  
                       const selectedId = e.target.value;
                       const selectedProd = products.find(p => p.product_id.toString() === selectedId);
-                    
                       setReceiveData({
                         ...receiveData, 
                         product_id: selectedId,
@@ -642,7 +686,7 @@ const Suppliers = () => {
                 <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}>
                   {isLoading ? 'Processing...' : 'Receive Delivery'}
                 </button>
-                <button type="button" className="cancel-btn" onClick={() => setShowReceiveModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => handleReceiveCloseAttempt(false)}>Cancel</button>
               </div>
             </form>
           </div>
@@ -667,7 +711,7 @@ const Suppliers = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
-                      }}className="close-x" onClick={() => setShowEditModal(false)}>
+                      }}className="close-x" onClick={() => handleEditCloseAttempt(false)}>
                         ✖
                         </button>
             </div>
@@ -696,7 +740,7 @@ const Suppliers = () => {
               </div>
               <div className="modal-footer">
                 <button type="submit" className="save-btn" style={{ backgroundColor: '#d32f2f' }} disabled={isLoading}> {isLoading ? 'Saving...' : 'Save Changes'} </button>
-                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => handleEditCloseAttempt(false)}>Cancel</button>
               </div>
             </form>
           </div>
@@ -718,6 +762,75 @@ const Suppliers = () => {
           </div>
         </div>
       )}
+
+      {/* ── MODAL: DISCARD ADD SUPPLIER ── */}
+{showAddDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Adding Supplier?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowAddDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved details. All entered information will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeAddFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowAddDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── MODAL: DISCARD RECEIVE STOCK ── */}
+{showReceiveDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Receiving Stock?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowReceiveDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved details. All entered information will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeReceiveFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowReceiveDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── MODAL: DISCARD EDIT SUPPLIER ── */}
+{showEditDiscardModal && (
+  <div className="modal-overlay alert-overlay">
+    <div className="delete-confirm-modal">
+      <div className="modal-header-red"><h3>Cancel Editing Supplier?</h3>
+        <button style={{
+          background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+          borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+          fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>✖</button>
+      </div>
+      <div className="delete-modal-body">
+        <p>You have unsaved changes. All modifications will be discarded.</p>
+        <div className="delete-modal-footer">
+          <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
+          <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
