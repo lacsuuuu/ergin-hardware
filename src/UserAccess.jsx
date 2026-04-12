@@ -164,16 +164,18 @@ const UserAccess = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  const toggleStatus = (employeeId) => {
-    setEmployees(prevEmployees => 
-      prevEmployees.map(emp => {
-        if (emp.employee_id === employeeId) {
-          return { ...emp, status: emp.status === 'Active' ? 'Inactive' : 'Active' };
-        }
-        return emp;
-      })
-    );
-  };
+//pinalitan ko code nila Dana para tawagin yung API instead of toggle lang talaga. for this to work palagay na lang sa supabase nung status tas lagay text active thanks youw
+  const toggleStatus = async(employeeId, currentStatus) =>{
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+
+    await fetch(`${API_URL}/api/employees/${employeeId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    fetchEmployees();
+  }
+
 
 const handleEdit = (employee) => {
   const data = {

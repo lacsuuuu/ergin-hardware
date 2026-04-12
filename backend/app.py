@@ -484,6 +484,7 @@ def get_employees():
             user_info = users.get(u_id, {})
             emp['username'] = user_info.get('username', 'No Account')
             emp['role'] = user_info.get('role', 'Unassigned')
+            emp['status'] = emp.get('status', 'Active') #dagdag ng status 
             
         return jsonify(employees), 200
     except Exception as e:
@@ -518,6 +519,24 @@ def add_employee():
     except Exception as e:
         print("--- ADD EMPLOYEE ERROR ---", e)
         return jsonify({"error": str(e)}), 500
+    
+#nagdagdag ako neto for the update toggle ng status
+@app.route('/api/employees/<int:emp_id>/status', methods=['PUT'])
+def update_employee_status(emp_id):
+    try:
+        data = request.json
+        status = data.get("status")
+
+        supabase.table('employee') \
+            .update({"status": status}) \
+            .eq('employee_id', emp_id) \
+            .execute()
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print("--- STATUS UPDATE ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/users/update', methods=['PUT'])
 def update_user_profile():
@@ -542,7 +561,8 @@ def update_user_profile():
             "email": data.get('email'), 
             "address": data.get('address'),
             "age": data.get('age'),
-            "birthday": data.get('birthday')
+            "birthday": data.get('birthday'),
+            "status": data.get('status') #sa status pa dagdag na lang din sa supabase sabuihan si kuya lacs 
         }
         employee_clean = {k: v for k, v in employee_data.items() if v != "" and v is not None}
 
