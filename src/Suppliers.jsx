@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './index.css';
-import logo from './assets/logotrans.png';
+import searchIcon from './assets/supplier_search button.png'; // Search icon
 import TopHeader from './TopHeader';
-import Logout from './Logout';
+import supplierIcon from './assets/supplier_header icon.png';
 
 // Sidebar nav icons
-import dashboardIcon from './assets/dashboard_header icon.png';
-import inventoryIcon from './assets/inventory_header icon.png';
-import salesRecordIcon from './assets/salesrecord_header icon.png';
-import userAccessIcon from './assets/useracess_header icon.png';
-import transactIcon from './assets/transact_pos header.png';
-import generateReportIcon from './assets/generate report_ header icon.png';
-import supplierIcon from './assets/supplier_header icon.png';
-import clientIcon from './assets/client_header icon.png';
-import searchIcon from './assets/supplier_search button.png'; // Search icon
+//import dashboardIcon from './assets/dashboard_header icon.png';
+//import inventoryIcon from './assets/inventory_header icon.png';
+//import salesRecordIcon from './assets/salesrecord_header icon.png';
+//import userAccessIcon from './assets/useracess_header icon.png';
+//import transactIcon from './assets/transact_pos header.png';
+//import generateReportIcon from './assets/generate report_ header icon.png';
+//import Logout from './Logout';
+//import logo from './assets/logotrans.png';
+//import clientIcon from './assets/client_header icon.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -23,8 +22,6 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
 const ROWS_PER_PAGE = 8; // Added pagination constant
 
 const Suppliers = () => {
-  const navigate = useNavigate();
-  
   // --- STATE MANAGEMENT ---
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -207,11 +204,6 @@ const openEditModal = (supplier) => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  const navIconStyle = {
-    width: '20px', height: '20px', marginRight: '8px',
-    objectFit: 'contain', verticalAlign: 'middle'
-  };
-
   const handleAddCloseAttempt = () => {
   const isDirty = newSupplierData.name !== '' || newSupplierData.contact !== '' ||
     newSupplierData.email !== '' || newSupplierData.address !== '';
@@ -300,38 +292,8 @@ const closeEditFormCompletely = () => {
 
       <div className="connected-border-box">
         {/* Sidebar */}
-        <aside className="sidebar">
-          <div className="logo-section">
-            <img src={logo} alt="Ergin Hardware" className="sidebar-logo" />
-          </div>
-          <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>
-              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
-            </div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>
-              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
-            </div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>
-              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
-            </div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>
-              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>
-              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
-            </div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>
-              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
-            </div>
-            <div className="nav-item active">
-              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>
-              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
-            </div>
-          </nav>
-          <Logout />
-        </aside>
+
+        <Sidebar />
 
         {/* Main Content */}
         <main className="dashboard-content">
