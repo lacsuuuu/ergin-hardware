@@ -38,37 +38,30 @@ function LoginPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username: name,
-          password: password 
-        }) 
-      });
+        const response = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: name,
+            password: password
+          })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok && data.success) {
-        localStorage.setItem('currentUser', data.username);
-        localStorage.setItem('currentRole', data.role);
-
-        if (data.role === 'Admin') {
-            navigate('/dashboard');
+        if (response.ok && data.success) {
+          localStorage.setItem('currentUser', data.username);
+          localStorage.setItem('currentRole', data.role);
+          navigate('/dashboard');
         } else {
-            navigate('/transact');
+          setShowError(true);
         }
 
-      } else {
+      } catch (error) {
+        console.error("Login error:", error);
         setShowError(true);
       }
-
-    } catch (error) {
-      console.error("Login Error:", error);
-      alert("System Error: Check backend console");
-    }
-  };
-
+    };
   return (
     <div className="login-wrapper">
       <div className="main-frame">

@@ -3,6 +3,7 @@ import './index.css';
 import searchIcon from './assets/supplier_search button.png'; // Search icon
 import TopHeader from './TopHeader';
 import supplierIcon from './assets/supplier_header icon.png';
+import Sidebar from './Sidebar';
 
 // Sidebar nav icons
 //import dashboardIcon from './assets/dashboard_header icon.png';

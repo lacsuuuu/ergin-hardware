@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './index.css';
 import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
 import Logout from './Logout';
+import Sidebar from './Sidebar';
 
 // Sidebar nav icons
-import dashboardIcon from './assets/dashboard_header icon.png';
-import inventoryIcon from './assets/inventory_header icon.png';
+//import dashboardIcon from './assets/dashboard_header icon.png';
+//import inventoryIcon from './assets/inventory_header icon.png';
 import salesRecordIcon from './assets/salesrecord_header icon.png';
-import userAccessIcon from './assets/useracess_header icon.png';
-import transactIcon from './assets/transact_pos header.png';
-import generateReportIcon from './assets/generate report_ header icon.png';
-import supplierIcon from './assets/supplier_header icon.png';
-import clientIcon from './assets/client_header icon.png';
+//import userAccessIcon from './assets/useracess_header icon.png';
+//import transactIcon from './assets/transact_pos header.png';
+//import generateReportIcon from './assets/generate report_ header icon.png';
+//import supplierIcon from './assets/supplier_header icon.png';
+//import clientIcon from './assets/client_header icon.png';
 import searchIcon from './assets/supplier_search button.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -23,7 +23,6 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
 const ROWS_PER_PAGE = 8; 
 
 const SalesRecord = () => {
-  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [sales, setSales] = useState([]);
@@ -102,17 +101,27 @@ const SalesRecord = () => {
     setRemarksModal({ show: true, text: sale.remarks || '', saleId: sale.sales_id });
   };
 
-  const handleSaveRemarks = () => {
-    setSales(prevSales => 
-      prevSales.map(s => s.sales_id === remarksModal.saleId ? { ...s, remarks: remarksModal.text } : s)
-    );
-    setRemarksModal({ show: false, text: '', saleId: null });
-    triggerToast("Remarks updated.", "success");
-  };
+  const handleSaveRemarks = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/sales/${remarksModal.saleId}/remarks`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ remarks: remarksModal.text })
+        }
+      );
 
-  const navIconStyle = {
-    width: '20px', height: '20px', marginRight: '8px',
-    objectFit: 'contain', verticalAlign: 'middle'
+      if (!response.ok) throw new Error("Failed to save remarks");
+      await fetchSalesRecords();
+
+      setRemarksModal({ show: false, text: '', saleId: null });
+      triggerToast("Remarks saved permanently ✔", "success");
+
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to save remarks", "error");
+    }
   };
 
   const filteredSales = sales.filter(s => {
@@ -170,43 +179,14 @@ const SalesRecord = () => {
       <div className="connected-border-box">
 
         {/* Sidebar */}
-        <aside className="sidebar no-print">
-          <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
-          <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>
-              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
-            </div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>
-              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
-            </div>
-            <div className="nav-item active">
-              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
-            </div>
-            <div className="nav-item" onClick={() => navigate('/user-access')}>
-              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>
-              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
-            </div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>
-              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
-            </div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>
-              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>
-              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
-            </div>
-          </nav>
-          <Logout />
-        </aside>
+        <Sidebar />
 
         {/* Main Content */}
         <main className="dashboard-content no-print">
           <header className="main-header">
             <div className="title-area" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img src={salesRecordIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-              <h2 style={{ margin: 0 }}>Sales Ledger</h2>
+              <h2 style={{ margin: 0 }}>Sales Record</h2>
             </div>
             <TopHeader />
           </header>

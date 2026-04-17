@@ -8,6 +8,7 @@ import TopHeader from './TopHeader';
 import './index.css';
 import Sidebar from "./Sidebar";
 import dashboardIcon from './assets/dashboard_header icon.png';
+import { canAccess } from "./sidebarRoles";
 
 //these r unused imports na since nilagay ko yung buong sidebar sa loob ng sidebar.jsx para magamit ng lahat with js <Sidebar /> 
 //import inventoryIcon from './assets/inventory_header icon.png';
@@ -19,7 +20,6 @@ import dashboardIcon from './assets/dashboard_header icon.png';
 //import clientIcon from './assets/client_header icon.png';
 //import logo from './assets/logotrans.png';
 //import Logout from './Logout';
-//import { canAccess } from "../sidebarRoles";
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000'
@@ -252,7 +252,7 @@ const Dashboard = () => {
           </div>
 
           {/* Floating Forecast Button */}
-          {isAdmin && (
+          {canAccess(currentRole, 'generate-report') && (
             <button onClick={() => navigate('/generate-report')}
               style={{
                 position: 'fixed', bottom: '30px', right: '30px',

@@ -256,9 +256,34 @@ def add_client():
     except Exception as e:
         print("--- ADD CLIENT ERROR ---", e)
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/clients/<int:client_id>', methods=['PUT'])
+def update_client(client_id):
+    try:
+        data = request.json
+
+        mapped_data = {
+            "name": data.get("name"),
+            "address": data.get("address"),
+            "contact": data.get("contact"),
+            "email": data.get("email"),
+            "business_style": data.get("business_style"),
+            "tin": data.get("tin")
+        }
+
+        response = supabase.table('customer') \
+            .update(mapped_data) \
+            .eq('customer_id', client_id) \
+            .execute()
+
+        return jsonify({"success": True, "data": response.data}), 200
+
+    except Exception as e:
+        print("--- UPDATE CLIENT ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
 
 # ==========================================
-# POS / SALES TRANSACTIONS
+# POS / SALES TRANSACTIONS / SALES RECORD
 # ==========================================
 @app.route('/api/sales', methods=['POST'])
 def process_sale():
@@ -349,6 +374,27 @@ def process_sale():
         print("--- SALE TRANSACTION ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/sales/<int:sales_id>/remarks", methods=["PUT"])
+def update_remarks(sales_id):
+    try:
+        data = request.json
+        remarks = data.get("remarks")
+
+        print("Saving remarks:", remarks, "for sale:", sales_id)
+
+        response = supabase.table('sales_transaction') \
+            .update({"remarks": remarks}) \
+            .eq('sales_id', sales_id) \
+            .execute()
+
+        print("Supabase response:", response)
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print(" UPDATE REMARKS ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
 # ==========================================
 # DASHBOARD METRICS
 # ==========================================
@@ -518,6 +564,29 @@ def add_employee():
 
     except Exception as e:
         print("--- ADD EMPLOYEE ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/employees/<int:emp_id>', methods=['PUT'])
+def update_employee(emp_id):
+    try:
+        data = request.json
+
+        mapped_data = {
+            "name": data.get("name"),
+            "contact": data.get("contact"),
+            "email": data.get("email"),
+            "address": data.get("address")
+        }
+
+        supabase.table('employee') \
+            .update(mapped_data) \
+            .eq('employee_id', emp_id) \
+            .execute()
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print("--- UPDATE EMPLOYEE ERROR ---", e)
         return jsonify({"error": str(e)}), 500
     
 #nagdagdag ako neto for the update toggle ng status

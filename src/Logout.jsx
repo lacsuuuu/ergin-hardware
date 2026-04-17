@@ -9,9 +9,9 @@ function Logout() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = () => {
-    // Clear the frontend token
     localStorage.removeItem('authToken');
-    // Redirect to the login screen
+    localStorage.removeItem('currentUser'); //dinagdag ko kasi napansin ko na bug pag nag log out ako hindi nawawala yung role ko kahit nag iba ako ng account cashier -> admin. naka cashier parin
+    localStorage.removeItem('currentRole');
     navigate('/login', { replace: true });
   };
 
