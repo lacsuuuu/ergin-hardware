@@ -36,17 +36,14 @@ def get_suppliers():
 
 @app.route('/api/suppliers', methods=['POST'])
 def add_supplier():
-    # Inserts a new supplier record into the database
     try:
         data = request.json
         mapped_data = {
-            "product_name": data.get("name"),
-            "category": data.get("category"),
-            "stock": 0,         
-            "retail_price": data.get("retail_price"),
-            "selling_price": data.get("selling_price")
+            "supplier_name": data.get("name"),
+            "contact": data.get("contact"),
+            "email": data.get("email"),
+            "address": data.get("address")
         }
-        
         response = supabase.table('supplier').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
@@ -74,6 +71,15 @@ def update_supplier(supplier_id):
         print(f"--- UPDATE SUPPLIER {supplier_id} ERROR ---", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/suppliers/<int:supplier_id>/archive', methods=['PUT'])
+def archive_supplier(supplier_id):
+    try:
+        data = request.json
+        response = supabase.table('supplier').update({'is_archived': data.get('is_archived')}).eq('supplier_id', supplier_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # ==========================================
 # PRODUCT & INVENTORY MANAGEMENT
 # ==========================================
@@ -89,16 +95,15 @@ def get_inventory():
 
 @app.route('/api/product', methods=['POST'])
 def add_product():
-    # Creates a new product profile with an initial stock of 0
     try:
         data = request.json
         mapped_data = {
             "product_name": data.get("name"),
             "category": data.get("category"),
-            "stock": data.get("qty", 0),         
-            "unit_price": data.get("retail")
+            "stock": 0,
+            "retail_price": data.get("retail_price"),
+            "selling_price": data.get("selling_price")
         }
-        
         response = supabase.table('product').insert(mapped_data).execute()
         return jsonify(response.data)
     except Exception as e:
@@ -135,6 +140,15 @@ def delete_item(item_id):
         return jsonify(response.data)
     except Exception as e:
         print("--- DELETE PRODUCT ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/product/<int:product_id>/archive', methods=['PUT'])
+def archive_product(product_id):
+    try:
+        data = request.json
+        supabase.table('product').update({'is_archived': data.get('is_archived')}).eq('product_id', product_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
@@ -280,6 +294,15 @@ def update_client(client_id):
 
     except Exception as e:
         print("--- UPDATE CLIENT ERROR ---", e)
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/clients/<int:client_id>/archive', methods=['PUT'])
+def archive_client(client_id):
+    try:
+        data = request.json
+        response = supabase.table('customer').update({'is_archived': data.get('is_archived')}).eq('customer_id', client_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
@@ -650,6 +673,15 @@ def update_user_profile():
     except Exception as e:
         print("--- PROFILE UPDATE ERROR ---", e)
         return jsonify({"error": "Failed to update database."}), 500
+    
+@app.route('/api/employees/<int:emp_id>/archive', methods=['PUT'])
+def archive_employee(emp_id):
+    try:
+        data = request.json
+        supabase.table('employee').update({'is_archived': data.get('is_archived')}).eq('employee_id', emp_id).execute()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 # ==========================================
 # BATCH TRACKING (FIFO INVENTORY)

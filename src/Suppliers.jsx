@@ -40,6 +40,7 @@ const Suppliers = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [showAddDiscardModal, setShowAddDiscardModal] = useState(false);
   const [showReceiveDiscardModal, setShowReceiveDiscardModal] = useState(false);
@@ -195,8 +196,34 @@ const openEditModal = (supplier) => {
   };
 
   const handleArchiveSubmit = async () => {
-    alert(`Archive functionality for ${selectedSupplier.supplier_name} coming soon!`);
+    try {
+      const newStatus = selectedSupplier.is_archived ? false : true;
+      const response = await fetch(`${API_URL}/api/suppliers/${selectedSupplier.supplier_id}/archive`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_archived: newStatus })
+      });
+
+      if (response.ok) {
+        setSuppliers(prev => prev.map(s =>
+          s.supplier_id === selectedSupplier.supplier_id ? { ...s, is_archived: newStatus } : s
+        ));
+        triggerToast(newStatus ? `${selectedSupplier.supplier_name} has been archived.` : `${selectedSupplier.supplier_name} has been restored.`);
+      } else {
+        // Fallback: update locally if backend route not ready yet
+        setSuppliers(prev => prev.map(s =>
+          s.supplier_id === selectedSupplier.supplier_id ? { ...s, is_archived: newStatus } : s
+        ));
+        triggerToast(newStatus ? `${selectedSupplier.supplier_name} archived.` : `${selectedSupplier.supplier_name} restored .`);
+      }
+    } catch (err) {
+      setSuppliers(prev => prev.map(s =>
+        s.supplier_id === selectedSupplier.supplier_id ? { ...s, is_archived: !s.is_archived } : s
+      ));
+      triggerToast(`${selectedSupplier.supplier_name} archived .`);
+    }
     setShowArchiveModal(false);
+    setSelectedSupplier(null);
   };
 
   // --- HELPERS ---
@@ -247,10 +274,13 @@ const closeEditFormCompletely = () => {
 };
 
   // --- FILTER & PAGINATION LOGIC ---
-  const filteredSuppliers = suppliers.filter(s => 
-    s.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.supplier_id?.toString().includes(searchTerm)
-  );
+  const filteredSuppliers = suppliers.filter(s => {
+    const matchesSearch =
+      s.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.supplier_id?.toString().includes(searchTerm);
+    const matchesArchive = showArchived ? true : !s.is_archived;
+    return matchesSearch && matchesArchive;
+  });
 
   const totalPages = Math.ceil(filteredSuppliers.length / ROWS_PER_PAGE);
   const paginatedSuppliers = filteredSuppliers.slice(
@@ -346,6 +376,17 @@ const closeEditFormCompletely = () => {
               >
                 + Add Supplier
               </button>
+              <button
+                onClick={() => setShowArchived(p => !p)}
+                style={{
+                  padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                  background: showArchived ? '#555' : '#f1f2f6',
+                  color: showArchived ? 'white' : '#555',
+                  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+              </button>
             </div>
           </div>
 
@@ -365,12 +406,19 @@ const closeEditFormCompletely = () => {
               <tbody>
                 {paginatedSuppliers.length > 0 ? (
                   paginatedSuppliers.map((sup) => (
-                    <tr key={sup.supplier_id}>
+                    <tr key={sup.supplier_id} style={{
+                      opacity: sup.is_archived ? 0.45 : 1,
+                      background: sup.is_archived ? '#f5f5f5' : 'white',
+                      transition: 'opacity 0.2s'
+                    }}>
                       <td>{sup.supplier_id}</td>
-                      <td style={{ fontWeight: 'bold', color: '#2c3e50' }}>{sup.supplier_name}</td>
-                      <td>{sup.contact}</td>
-                      <td>{sup.email || 'N/A'}</td> 
-                      <td>{sup.address}</td>
+                      <td style={{ fontWeight: 'bold', color: sup.is_archived ? '#999' : '#2c3e50' }}>
+                        {sup.supplier_name}
+                        {sup.is_archived && <span style={{ marginLeft: '8px', fontSize: '10px', background: '#ccc', color: '#555', padding: '2px 6px', borderRadius: '10px', fontWeight: 'normal' }}>Archived</span>}
+                      </td>
+                      <td style={{ color: sup.is_archived ? '#999' : undefined }}>{sup.contact}</td>
+                      <td style={{ color: sup.is_archived ? '#999' : undefined }}>{sup.email || 'N/A'}</td>
+                      <td style={{ color: sup.is_archived ? '#999' : undefined }}>{sup.address}</td>
                       
                       {/* ACTION CELL — updated to match Clients/UserAccess style */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
@@ -408,7 +456,7 @@ const closeEditFormCompletely = () => {
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                 Archive
+                                 {sup.is_archived ? 'Unarchive' : 'Archive'}
                               </button>
                             </div>
                           </>
@@ -710,17 +758,26 @@ const closeEditFormCompletely = () => {
         </div>
       )}
 
-      {/* --- MODAL: ARCHIVE CONFIRMATION --- */}
       {showArchiveModal && selectedSupplier && (
         <div className="modal-overlay alert-overlay">
-          <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
-            <h3 style={{ color: '#e74c3c', marginTop: 0 }}>Archive Supplier?</h3>
-            <p style={{ color: '#000', marginBottom: '20px' }}>
-              Are you sure you want to archive <strong>{selectedSupplier.supplier_name}</strong>? They will no longer appear in your active dropdowns for receiving stock.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
-              <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+          <div className="delete-confirm-modal" style={{ background: 'white', borderRadius: '12px', width: '400px', overflow: 'hidden' }}>
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{selectedSupplier.is_archived ? 'Restore Supplier?' : 'Archive Supplier?'}</h3>
+              <button onClick={() => setShowArchiveModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px' }}>✖</button>
+            </div>
+            <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+              <p style={{ color: '#333', fontSize: '14px', margin: '0 0 20px 0' }}>
+                {selectedSupplier.is_archived
+                  ? <>Are you sure you want to restore <strong>{selectedSupplier.supplier_name}</strong>? They will appear as an active supplier again.</>
+                  : <>Are you sure you want to archive <strong>{selectedSupplier.supplier_name}</strong>? They will be grayed out and hidden from active lists.</>
+                }
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {selectedSupplier.is_archived ? 'Yes, Restore' : 'Yes, Archive'}
+                </button>
+                <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>

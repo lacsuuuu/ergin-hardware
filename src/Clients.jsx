@@ -40,6 +40,7 @@ const Clients = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [originalEditData, setOriginalEditData] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // --- DATA STATE ---
   const [clients, setClients] = useState([]);
@@ -157,9 +158,41 @@ const handleArchive = (client) => {
   setActiveDropdown(null);
 };
 
-const handleArchiveSubmit = () => {
-  // Archive API logic goes here
-  triggerToast(`${selectedClient.name} has been archived.`);
+const handleArchiveSubmit = async () => {
+  try {
+    const newStatus = selectedClient.is_archived ? false : true;
+    const response = await fetch(`${API_URL}/api/clients/${selectedClient.customer_id}/archive`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_archived: newStatus })
+    });
+
+    if (response.ok) {
+      // Update local state instantly — no need to re-fetch
+      setClients(prev => prev.map(c =>
+        c.customer_id === selectedClient.customer_id
+          ? { ...c, is_archived: newStatus }
+          : c
+      ));
+      triggerToast(newStatus ? `${selectedClient.name} has been archived.` : `${selectedClient.name} has been restored.`);
+    } else {
+      // Backend route may not exist yet — still update locally so UI works
+      setClients(prev => prev.map(c =>
+        c.customer_id === selectedClient.customer_id
+          ? { ...c, is_archived: newStatus }
+          : c
+      ));
+      triggerToast(newStatus ? `${selectedClient.name} archived (local only).` : `${selectedClient.name} restored (local only).`);
+    }
+  } catch (err) {
+    // Fallback: still apply locally if backend isn't ready
+    setClients(prev => prev.map(c =>
+      c.customer_id === selectedClient.customer_id
+        ? { ...c, is_archived: !c.is_archived }
+        : c
+    ));
+    triggerToast(`${selectedClient.name} archived (local only).`);
+  }
   setShowArchiveModal(false);
   setSelectedClient(null);
 };
@@ -182,10 +215,13 @@ const closeEditFormCompletely = () => {
 };
 
   // --- FILTER & PAGINATION LOGIC ---
-  const filteredClients = clients.filter(c =>
-    (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = clients.filter(c => {
+    const matchesSearch =
+      (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesArchive = showArchived ? true : !c.is_archived;
+    return matchesSearch && matchesArchive;
+  });
 
   const totalPages = Math.ceil(filteredClients.length / ROWS_PER_PAGE);
   const paginatedClients = filteredClients.slice(
@@ -262,6 +298,17 @@ const closeEditFormCompletely = () => {
               />
             </div>
             <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Client</button>
+            <button
+              onClick={() => setShowArchived(p => !p)}
+              style={{
+                padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                background: showArchived ? '#555' : '#f1f2f6',
+                color: showArchived ? 'white' : '#555',
+                fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+              }}
+            >
+              {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+            </button>
           </div>
 
           <div className="table-container shadow-box">
@@ -281,14 +328,21 @@ const closeEditFormCompletely = () => {
               <tbody>
                 {paginatedClients.length > 0 ? (
                   paginatedClients.map((c) => (
-                    <tr key={c.customer_id}>
-                      <td style={{ padding: '12px' }}>{c.customer_id}</td>
-                      <td style={{ fontWeight: 'bold', padding: '12px' }}>{c.name}</td>
-                      <td style={{ padding: '12px' }}>{c.contact}</td>
-                      <td style={{ padding: '12px' }}>{c.email}</td>
-                      <td style={{ padding: '12px' }}>{c.address}</td>
-                      <td style={{ padding: '12px' }}>{c.business_style}</td>
-                      <td style={{ padding: '12px' }}>{c.tin}</td>
+                    <tr key={c.customer_id} style={{
+                      opacity: c.is_archived ? 0.45 : 1,
+                      background: c.is_archived ? '#f5f5f5' : 'white',
+                      transition: 'opacity 0.2s'
+                    }}>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.customer_id}</td>
+                      <td style={{ fontWeight: 'bold', padding: '12px', color: c.is_archived ? '#999' : undefined }}>
+                        {c.name}
+                        {c.is_archived && <span style={{ marginLeft: '8px', fontSize: '10px', background: '#ccc', color: '#555', padding: '2px 6px', borderRadius: '10px', fontWeight: 'normal' }}>Archived</span>}
+                      </td>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.contact}</td>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.email}</td>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.address}</td>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.business_style}</td>
+                      <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.tin}</td>
 
                       {/* ADDED: Action dropdown column */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible', padding: '12px' }}>
@@ -321,12 +375,12 @@ const closeEditFormCompletely = () => {
                                  Edit
                               </button>
                               <button
-                                onClick={() => handleArchive(c.customer_id)}
+                                onClick={() => handleArchive(c)}
                                 style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'white'}
                               >
-                                 Archive
+                                 {c.is_archived ? 'Unarchive' : 'Archive'}
                               </button>
                             </div>
                           </>
@@ -568,14 +622,24 @@ const closeEditFormCompletely = () => {
 {/* ── MODAL: ARCHIVE CLIENT ── */}
 {showArchiveModal && selectedClient && (
   <div className="modal-overlay alert-overlay">
-    <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
-      <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Client?</h3>
-      <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
-        Are you sure you want to archive <strong>{selectedClient.name}</strong>? They will no longer appear in active client lists.
-      </p>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-        <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
-        <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+    <div className="delete-confirm-modal" style={{ background: 'white', borderRadius: '12px', width: '400px', overflow: 'hidden' }}>
+      <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '16px' }}>{selectedClient.is_archived ? 'Restore Client?' : 'Archive Client?'}</h3>
+        <button onClick={() => setShowArchiveModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px' }}>✖</button>
+      </div>
+      <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+        <p style={{ color: '#333', fontSize: '14px', margin: '0 0 20px 0' }}>
+          {selectedClient.is_archived
+            ? <>Are you sure you want to restore <strong>{selectedClient.name}</strong>? They will appear as an active client again.</>
+            : <>Are you sure you want to archive <strong>{selectedClient.name}</strong>? They will be grayed out and hidden from active lists.</>
+          }
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+          <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+            {selectedClient.is_archived ? 'Yes, Restore' : 'Yes, Archive'}
+          </button>
+          <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+        </div>
       </div>
     </div>
   </div>

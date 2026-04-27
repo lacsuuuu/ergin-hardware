@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './index.css';
-import logo from './assets/logotrans.png';
 import TopHeader from './TopHeader';
-import Logout from './Logout';
-
-// Sidebar nav icons
-import dashboardIcon from './assets/dashboard_header icon.png';
-import inventoryIcon from './assets/inventory_header icon.png';
-import salesRecordIcon from './assets/salesrecord_header icon.png';
+import Sidebar from './Sidebar';
 import userAccessIcon from './assets/useracess_header icon.png';
-import transactIcon from './assets/transact_pos header.png';
-import generateReportIcon from './assets/generate report_ header icon.png';
-import supplierIcon from './assets/supplier_header icon.png';
-import clientIcon from './assets/client_header icon.png';
 import searchIcon from './assets/supplier_search button.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -23,7 +12,6 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
 const ROWS_PER_PAGE = 8; 
 
 const UserAccess = () => {
-  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // State
@@ -41,6 +29,7 @@ const UserAccess = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [originalEditData, setOriginalEditData] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Form Data for New User
   const [formData, setFormData] = useState({
@@ -199,17 +188,43 @@ const handleArchive = (employee) => {
   setActiveDropdown(null);
 };
 
-const handleArchiveSubmit = () => {
-  // Archive API logic goes here
-  triggerToast(`${selectedEmployee.name} has been archived.`);
+const handleArchiveSubmit = async () => {
+  try {
+    const newStatus = selectedEmployee.is_archived ? false : true;
+    const response = await fetch(`${API_URL}/api/employees/${selectedEmployee.employee_id}/archive`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_archived: newStatus })
+    });
+
+    if (response.ok) {
+      setEmployees(prev => prev.map(e =>
+        e.employee_id === selectedEmployee.employee_id ? { ...e, is_archived: newStatus } : e
+      ));
+      triggerToast(newStatus ? `${selectedEmployee.name} has been archived.` : `${selectedEmployee.name} has been restored.`);
+    } else {
+      setEmployees(prev => prev.map(e =>
+        e.employee_id === selectedEmployee.employee_id ? { ...e, is_archived: newStatus } : e
+      ));
+      triggerToast(newStatus ? `${selectedEmployee.name} archived (local only).` : `${selectedEmployee.name} restored (local only).`);
+    }
+  } catch (err) {
+    setEmployees(prev => prev.map(e =>
+      e.employee_id === selectedEmployee.employee_id ? { ...e, is_archived: !e.is_archived } : e
+    ));
+    triggerToast(`${selectedEmployee.name} archived (local only).`);
+  }
   setShowArchiveModal(false);
   setSelectedEmployee(null);
 };
 
-  const filteredEmployees = employees.filter(e => 
-    e.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    e.username?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(e => {
+    const matchesSearch =
+      e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.username?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesArchive = showArchived ? true : !e.is_archived;
+    return matchesSearch && matchesArchive;
+  });
 
   const totalPages = Math.ceil(filteredEmployees.length / ROWS_PER_PAGE);
   const paginatedEmployees = filteredEmployees.slice(
@@ -247,11 +262,6 @@ const closeEditFormCompletely = () => {
   setFormError('');
 };
 
-  const navIconStyle = {
-    width: '20px', height: '20px', marginRight: '8px',
-    objectFit: 'contain', verticalAlign: 'middle'
-  };
-
   const getRoleColor = (role) => {
     if (role === 'Administrator' || role === 'Admin') return '#d10000'; 
     if (role === 'Supervisor') return '#850000'; 
@@ -264,36 +274,7 @@ const closeEditFormCompletely = () => {
 
       <div className="connected-border-box">
         
-        <aside className="sidebar">
-          <div className="logo-section"><img src={logo} alt="Logo" className="sidebar-logo" /></div>
-          <nav className="side-nav">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>
-              <img src={dashboardIcon} alt="" style={navIconStyle} />DASHBOARD
-            </div>
-            <div className="nav-item" onClick={() => navigate('/inventory')}>
-              <img src={inventoryIcon} alt="" style={navIconStyle} />INVENTORY
-            </div>
-            <div className="nav-item" onClick={() => navigate('/sales-record')}>
-              <img src={salesRecordIcon} alt="" style={navIconStyle} />SALES RECORD
-            </div>
-            <div className="nav-item active">
-              <img src={userAccessIcon} alt="" style={navIconStyle} />USER ACCESS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/transact')}>
-              <img src={transactIcon} alt="" style={navIconStyle} />TRANSACT
-            </div>
-            <div className="nav-item" onClick={() => navigate('/generate-report')}>
-              <img src={generateReportIcon} alt="" style={navIconStyle} />GENERATE REPORT
-            </div>
-            <div className="nav-item" onClick={() => navigate('/suppliers')}>
-              <img src={supplierIcon} alt="" style={navIconStyle} />SUPPLIERS
-            </div>
-            <div className="nav-item" onClick={() => navigate('/clients')}>
-              <img src={clientIcon} alt="" style={navIconStyle} />CLIENTS
-            </div>
-          </nav>
-          <Logout />
-        </aside>
+        <Sidebar />
 
         <main className="dashboard-content">
           <header className="main-header">
@@ -327,6 +308,17 @@ const closeEditFormCompletely = () => {
               />
             </div>
             <button className="add-supplier-btn" onClick={() => setShowModal(true)}>+ Add Staff Account</button>
+            <button
+              onClick={() => setShowArchived(p => !p)}
+              style={{
+                padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                background: showArchived ? '#555' : '#f1f2f6',
+                color: showArchived ? 'white' : '#555',
+                fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+              }}
+            >
+              {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+            </button>
           </div>
 
           <div className="table-container shadow-box">
@@ -344,9 +336,16 @@ const closeEditFormCompletely = () => {
               </thead>
               <tbody>
                 {paginatedEmployees.map((emp) => (
-                  <tr key={emp.employee_id}>
-                    <td>{emp.employee_id}</td>
-                    <td style={{ fontWeight: 'bold' }}>{emp.name}</td>
+                  <tr key={emp.employee_id} style={{
+                    opacity: emp.is_archived ? 0.45 : 1,
+                    background: emp.is_archived ? '#f5f5f5' : 'white',
+                    transition: 'opacity 0.2s'
+                  }}>
+                    <td style={{ color: emp.is_archived ? '#999' : undefined }}>{emp.employee_id}</td>
+                    <td style={{ fontWeight: 'bold', color: emp.is_archived ? '#999' : undefined }}>
+                      {emp.name}
+                      {emp.is_archived && <span style={{ marginLeft: '8px', fontSize: '10px', background: '#ccc', color: '#555', padding: '2px 6px', borderRadius: '10px', fontWeight: 'normal' }}>Archived</span>}
+                    </td>
                     <td>
                       {/* Tighter padding on the role badge to save vertical row height */}
                       <span style={{ 
@@ -359,22 +358,21 @@ const closeEditFormCompletely = () => {
                     <td>{emp.username}</td>
                     <td>{emp.contact}</td>
                     <td>
-                      {/* Tighter padding on the status button to prevent scrollbars */}
                       <button 
-                        onClick={() => toggleStatus(emp.employee_id)}
+                        onClick={() => !emp.is_archived && toggleStatus(emp.employee_id, emp.status)}
                         style={{
                           padding: '4px 10px', 
                           borderRadius: '4px', 
                           border: 'none',
                           fontWeight: 'bold', 
                           color: 'white', 
-                          cursor: 'pointer', 
+                          cursor: emp.is_archived ? 'default' : 'pointer', 
                           fontSize: '12px',
-                          background: emp.status === 'Active' ? '#27ae60' : '#d10000', 
+                          background: emp.is_archived ? '#888' : emp.status === 'Active' ? '#27ae60' : '#d10000', 
                           width: '75px' 
                         }}
                       >
-                        {emp.status}
+                        {emp.is_archived ? 'Archived' : emp.status}
                       </button>
                     </td>
                     <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
@@ -413,7 +411,7 @@ const closeEditFormCompletely = () => {
                               onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                               onMouseOut={(e) => e.target.style.background = 'white'}
                             >
-                               Archive
+                               {emp.is_archived ? 'Unarchive' : 'Archive'}
                             </button>
                           </div>
                         </>
@@ -651,17 +649,26 @@ const closeEditFormCompletely = () => {
   </div>
 )}
 
-{/* ── MODAL: ARCHIVE EMPLOYEE ── */}
 {showArchiveModal && selectedEmployee && (
   <div className="modal-overlay alert-overlay">
-    <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
-      <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Staff Account?</h3>
-      <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
-        Are you sure you want to archive <strong>{selectedEmployee.name}</strong>? Their account will be deactivated and removed from active staff lists.
-      </p>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-        <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
-        <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+    <div className="delete-confirm-modal" style={{ background: 'white', borderRadius: '12px', width: '400px', overflow: 'hidden' }}>
+      <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '16px' }}>{selectedEmployee.is_archived ? 'Restore Staff Account?' : 'Archive Staff Account?'}</h3>
+        <button onClick={() => setShowArchiveModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px' }}>✖</button>
+      </div>
+      <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+        <p style={{ color: '#333', fontSize: '14px', margin: '0 0 20px 0' }}>
+          {selectedEmployee.is_archived
+            ? <>Are you sure you want to restore <strong>{selectedEmployee.name}</strong>? Their account will be active again.</>
+            : <>Are you sure you want to archive <strong>{selectedEmployee.name}</strong>? Their account will be deactivated and hidden from active staff lists.</>
+          }
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+          <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+            {selectedEmployee.is_archived ? 'Yes, Restore' : 'Yes, Archive'}
+          </button>
+          <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+        </div>
       </div>
     </div>
   </div>

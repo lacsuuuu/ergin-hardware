@@ -51,6 +51,7 @@ const Inventory = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '', category: '', retail_price: 0, selling_price: 0
@@ -122,13 +123,32 @@ const Inventory = () => {
 
   const handleArchiveSubmit = async () => {
     try {
-      // Logic for archiving API call would go here
-      triggerToast(`${selectedProduct.product_name} archived successfully.`);
-      setShowArchiveModal(false);
-      fetchInventory();
+      const newStatus = selectedProduct.is_archived ? false : true;
+      const response = await fetch(`${API_URL}/api/product/${selectedProduct.product_id}/archive`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_archived: newStatus })
+      });
+
+      if (response.ok) {
+        setProducts(prev => prev.map(p =>
+          p.product_id === selectedProduct.product_id ? { ...p, is_archived: newStatus } : p
+        ));
+        triggerToast(newStatus ? `${selectedProduct.product_name} has been archived.` : `${selectedProduct.product_name} has been restored.`);
+      } else {
+        setProducts(prev => prev.map(p =>
+          p.product_id === selectedProduct.product_id ? { ...p, is_archived: newStatus } : p
+        ));
+        triggerToast(newStatus ? `${selectedProduct.product_name} archived (local only).` : `${selectedProduct.product_name} restored (local only).`);
+      }
     } catch (error) {
-      console.error("Archive error:", error);
+      setProducts(prev => prev.map(p =>
+        p.product_id === selectedProduct.product_id ? { ...p, is_archived: !p.is_archived } : p
+      ));
+      triggerToast(`${selectedProduct.product_name} archived (local only).`);
     }
+    setShowArchiveModal(false);
+    setSelectedProduct(null);
   };
 
   const triggerToast = (message, type = 'success') => {
@@ -197,6 +217,8 @@ const openArchiveModal = (product) => {
   };
 
   const filteredProducts = products.filter(product => {
+    const matchesArchive = showArchived ? true : !product.is_archived;
+    if (!matchesArchive) return false;
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     return (
@@ -309,6 +331,17 @@ const openArchiveModal = (product) => {
               <button className="add-product-btn" onClick={() => setShowAddModal(true)}>
                 + Add Product
               </button>
+              <button
+                onClick={() => setShowArchived(p => !p)}
+                style={{
+                  padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                  background: showArchived ? '#555' : '#f1f2f6',
+                  color: showArchived ? 'white' : '#555',
+                  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+              </button>
             </div>
           </div>
 
@@ -330,21 +363,27 @@ const openArchiveModal = (product) => {
               <tbody>
                 {paginatedProducts.length > 0 ? (
                   paginatedProducts.map((product) => (
-                    <tr key={product.product_id}>
-                      <td>{product.product_id}</td>
-                      <td style={{ fontWeight: '600' }}>{product.product_name}</td>
-                      <td>{product.category}</td>
+                    <tr key={product.product_id} style={{
+                      opacity: product.is_archived ? 0.45 : 1,
+                      background: product.is_archived ? '#f5f5f5' : 'white',
+                      transition: 'opacity 0.2s'
+                    }}>
+                      <td style={{ color: product.is_archived ? '#999' : undefined }}>{product.product_id}</td>
+                      <td style={{ fontWeight: '600', color: product.is_archived ? '#999' : undefined }}>
+                        {product.product_name}
+                        {product.is_archived && <span style={{ marginLeft: '8px', fontSize: '10px', background: '#ccc', color: '#555', padding: '2px 6px', borderRadius: '10px', fontWeight: 'normal' }}>Archived</span>}
+                      </td>
+                      <td style={{ color: product.is_archived ? '#999' : undefined }}>{product.category}</td>
                       <td>
                         <span style={{
-                          color: product.stock > 10 ? '#27ae60' : product.stock > 0 ? '#e67e22' : '#e74c3c',
+                          color: product.is_archived ? '#999' : product.stock > 10 ? '#27ae60' : product.stock > 0 ? '#e67e22' : '#e74c3c',
                           fontWeight: 'bold'
                         }}>
                           {product.stock}
                         </span>
                       </td>
-                      {/* SWAPPED: Selling Price first */}
-                      <td style={{ color: '#000' }}>₱{Number(product.selling_price || 0).toFixed(2)}</td>
-                      <td style={{ color: '#555' }}>₱{Number(product.retail_price || 0).toFixed(2)}</td>
+                      <td style={{ color: product.is_archived ? '#999' : '#000' }}>₱{Number(product.selling_price || 0).toFixed(2)}</td>
+                      <td style={{ color: product.is_archived ? '#999' : '#555' }}>₱{Number(product.retail_price || 0).toFixed(2)}</td>
 
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible' }}>
                         <button
@@ -384,7 +423,9 @@ const openArchiveModal = (product) => {
                                  Batches
                               </button>
                               <button onClick={() => openArchiveModal(product)} style={{ padding: '10px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
-                                >Archive
+                                onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
+                                onMouseOut={(e) => e.target.style.background = 'none'}
+                                >{product.is_archived ? 'Unarchive' : 'Archive'}
                                 </button>
                             </div>
                           </>
@@ -532,7 +573,7 @@ const openArchiveModal = (product) => {
               {/* Footer Styled like UserAccess */}
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
                 <button type="button" className="cancel-btn" onClick={handleCloseAttempt} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Profile</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Product</button>
               </div>
             </form>
           </div>
@@ -602,17 +643,26 @@ const openArchiveModal = (product) => {
         </div>
       )}
 
-            {/* ── MODAL: ARCHIVE VALIDATION ── */}
       {showArchiveModal && selectedProduct && (
         <div className="modal-overlay alert-overlay">
-          <div className="delete-confirm-modal" style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px', textAlign: 'center' }}>
-            <h3 style={{ color: '#d10000', marginTop: 0, fontSize: '18px' }}>Archive Product?</h3>
-            <p style={{ color: '#333', marginBottom: '20px', fontSize: '14px' }}>
-              Are you sure you want to archive <strong>{selectedProduct.product_name}</strong>? It will no longer appear in active inventory lists.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Yes, Archive</button>
-              <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+          <div className="delete-confirm-modal" style={{ background: 'white', borderRadius: '12px', width: '400px', overflow: 'hidden' }}>
+            <div className="modal-header-red" style={{ padding: '16px 20px', background: '#d10000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{selectedProduct.is_archived ? 'Restore Product?' : 'Archive Product?'}</h3>
+              <button onClick={() => setShowArchiveModal(false)} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', padding: '4px 8px' }}>✖</button>
+            </div>
+            <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+              <p style={{ color: '#333', fontSize: '14px', margin: '0 0 20px 0' }}>
+                {selectedProduct.is_archived
+                  ? <>Are you sure you want to restore <strong>{selectedProduct.product_name}</strong>? It will appear in active inventory again.</>
+                  : <>Are you sure you want to archive <strong>{selectedProduct.product_name}</strong>? It will be hidden from active inventory lists.</>
+                }
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <button onClick={handleArchiveSubmit} style={{ padding: '10px 20px', backgroundColor: '#d10000', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {selectedProduct.is_archived ? 'Yes, Restore' : 'Yes, Archive'}
+                </button>
+                <button onClick={() => setShowArchiveModal(false)} style={{ padding: '10px 20px', backgroundColor: '#ecf0f1', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>
