@@ -8,16 +8,6 @@ import Sidebar from "./Sidebar";
 import inventoryIcon from './assets/inventory_header icon.png';
 import searchIcon from './assets/supplier_search button.png'; // Added search icon import
 
-//same sa dashboard.jsx eto yung mga import na di na need kasi nasa loob na ng sidebar.jsx
-//import logo from './assets/logotrans.png';
-//import dashboardIcon from './assets/dashboard_header icon.png';
-//import Logout from './Logout';
-//import salesRecordIcon from './assets/salesrecord_header icon.png';
-//import userAccessIcon from './assets/useracess_header icon.png';
-//import transactIcon from './assets/transact_pos header.png';
-//import generateReportIcon from './assets/generate report_ header icon.png';
-//import supplierIcon from './assets/supplier_header icon.png';
-//import clientIcon from './assets/client_header icon.png';
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000'
   : 'https://ergin-hardware.onrender.com';
@@ -167,37 +157,37 @@ const Inventory = () => {
     setFormData({ name: '', category: '', retail_price: 0, selling_price: 0 });
   };
 
-const openEditModal = (product) => {
-  const data = {
-    id: product.product_id,
-    name: product.product_name,
-    category: product.category,
-    retail_price: product.retail_price || 0,
-    selling_price: product.selling_price || 0
+  const openEditModal = (product) => {
+    const data = {
+      id: product.product_id,
+      name: product.product_name,
+      category: product.category,
+      retail_price: product.retail_price || 0,
+      selling_price: product.selling_price || 0
+    };
+    setEditData(data);
+    setOriginalEditData(data); // <-- save original
+    setShowEditModal(true);
+    setActiveDropdown(null);
   };
-  setEditData(data);
-  setOriginalEditData(data); // <-- save original
-  setShowEditModal(true);
-  setActiveDropdown(null);
-};
 
-const handleEditCloseAttempt = () => {
-  const isDirty =
-    editData.name !== originalEditData.name ||
-    editData.category !== originalEditData.category ||
-    editData.retail_price !== originalEditData.retail_price ||
-    editData.selling_price !== originalEditData.selling_price;
+  const handleEditCloseAttempt = () => {
+    const isDirty =
+      editData.name !== originalEditData.name ||
+      editData.category !== originalEditData.category ||
+      editData.retail_price !== originalEditData.retail_price ||
+      editData.selling_price !== originalEditData.selling_price;
 
-  if (isDirty) setShowEditDiscardModal(true);
-  else setShowEditModal(false);
-};
+    if (isDirty) setShowEditDiscardModal(true);
+    else setShowEditModal(false);
+  };
 
-const closeEditFormCompletely = () => {
-  setShowEditDiscardModal(false);
-  setShowEditModal(false);
-};
+  const closeEditFormCompletely = () => {
+    setShowEditDiscardModal(false);
+    setShowEditModal(false);
+  };
 
-const openArchiveModal = (product) => {
+  const openArchiveModal = (product) => {
     setSelectedProduct(product);
     setShowArchiveModal(true);
     setActiveDropdown(null);
@@ -350,7 +340,6 @@ const openArchiveModal = (product) => {
             <table className="inventory-table">
               <thead>
                 <tr>
-                  {/* Applied Bold Styling to Headers */}
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Product ID</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Product Name</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Category</th>
@@ -448,58 +437,51 @@ const openArchiveModal = (product) => {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Uniform Pagination - Centered matching other pages */}
           {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
-              <span style={{ fontSize: '12px', color: '#888' }}>
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sortedProducts.length)} of {sortedProducts.length} products
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                  background: currentPage === 1 ? '#eee' : '#d10000',
+                  color: currentPage === 1 ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                ← Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  style={{
+                    background: currentPage === page ? '#d10000' : 'white',
+                    color: currentPage === page ? 'white' : '#333',
+                    border: '1px solid #ddd', borderRadius: '4px',
+                    padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold',
+                    minWidth: '34px'
+                  }}>
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                  background: currentPage === totalPages ? '#eee' : '#d10000',
+                  color: currentPage === totalPages ? '#aaa' : 'white',
+                  border: 'none', borderRadius: '4px', padding: '6px 12px',
+                  cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 'bold'
+                }}>
+                Next →
+              </button>
+
+              <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                Page {currentPage} of {totalPages} ({sortedProducts.length} records)
               </span>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
-                    background: currentPage === 1 ? '#f5f5f5' : 'white',
-                    color: currentPage === 1 ? '#bbb' : '#333',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '12px', fontWeight: '600'
-                  }}
-                >
-                  ← Prev
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    style={{
-                      padding: '5px 10px', borderRadius: '6px',
-                      border: page === currentPage ? 'none' : '1px solid #ddd',
-                      background: page === currentPage ? '#d10000' : 'white',
-                      color: page === currentPage ? 'white' : '#333',
-                      cursor: 'pointer', fontSize: '12px', fontWeight: '600',
-                      minWidth: '32px'
-                    }}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
-                    background: currentPage === totalPages ? '#f5f5f5' : 'white',
-                    color: currentPage === totalPages ? '#bbb' : '#333',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontSize: '12px', fontWeight: '600'
-                  }}
-                >
-                  Next →
-                </button>
-              </div>
             </div>
           )}
         </main>
@@ -695,29 +677,30 @@ const openArchiveModal = (product) => {
           </div>
         </div>
       )}
-{/* ── MODAL: DISCARD EDIT CHANGES ── */}
-{showEditDiscardModal && (
-  <div className="modal-overlay alert-overlay">
-    <div className="delete-confirm-modal">
-      <div className="modal-header-red"><h3>Cancel Editing Product?</h3>
-      <button style={{
-            background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
-            borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
-            fontWeight: 'bold', padding: '4px 8px', display: 'flex',
-            alignItems: 'center', justifyContent: 'center'
-          }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>
-          ✖
-        </button></div>
-      <div className="delete-modal-body">
-        <p>You have unsaved changes. All modifications will be discarded.</p>
-        <div className="delete-modal-footer">
-          <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
-          <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+      
+      {/* ── MODAL: DISCARD EDIT CHANGES ── */}
+      {showEditDiscardModal && (
+        <div className="modal-overlay alert-overlay">
+          <div className="delete-confirm-modal">
+            <div className="modal-header-red"><h3>Cancel Editing Product?</h3>
+            <button style={{
+                  background: '#f1f2f6', color: '#333', border: '1px solid #bdc3c7',
+                  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 'bold', padding: '4px 8px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }} className="close-x" onClick={() => setShowEditDiscardModal(false)}>
+                ✖
+              </button></div>
+            <div className="delete-modal-body">
+              <p>You have unsaved changes. All modifications will be discarded.</p>
+              <div className="delete-modal-footer">
+                <button className="confirm-delete-btn" onClick={closeEditFormCompletely}>Discard</button>
+                <button className="cancel-delete-btn" onClick={() => setShowEditDiscardModal(false)}>Keep Editing</button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
     </div>
   );

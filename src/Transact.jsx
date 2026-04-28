@@ -15,7 +15,7 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
-const ROWS_PER_PAGE = 8; // NEW: Added pagination constant
+const ROWS_PER_PAGE = 8; 
   
 const Transact = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -29,7 +29,7 @@ const Transact = () => {
   const [selectedClient, setSelectedClient] = useState('');
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1); // NEW: Pagination state
+  const [currentPage, setCurrentPage] = useState(1); 
 
   // --- MODAL STATES ---
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -39,10 +39,11 @@ const Transact = () => {
 
   // --- CHECKOUT MODAL STATES ---
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false); // NEW: Loading state for checkout
 
   // --- BARCODE SCANNER STATE ---
   const [barcodeInput, setBarcodeInput] = useState('');
-  const [scanStatus, setScanStatus] = useState(null); // 'success' | 'error' | null
+  const [scanStatus, setScanStatus] = useState(null); 
   const barcodeRef = React.useRef(null);
 
   // --- CAMERA SCANNER STATE ---
@@ -256,6 +257,7 @@ const Transact = () => {
     setCameraError('');
     setTimeout(() => barcodeRef.current?.focus(), 100);
   };
+  
   const handleDedicatedScan = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -277,9 +279,7 @@ const Transact = () => {
       }
 
       setBarcodeInput('');
-      // Reset scan flash after 600ms
       setTimeout(() => setScanStatus(null), 600);
-      // Re-focus the scanner field
       setTimeout(() => barcodeRef.current?.focus(), 50);
     }
   };
@@ -287,16 +287,14 @@ const Transact = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
   // --- CHECKOUT LOGIC ---
-  // Step 1: Called when user clicks "Complete Checkout" — shows confirmation popup
   const handleCheckoutClick = () => {
     if (!selectedClient) { alert("Please select a client first!"); return; }
     if (cart.length === 0) { alert("Cart is empty!"); return; }
     setShowCheckoutConfirm(true);
   };
 
-  // Step 2: Called when user confirms — proceeds with actual checkout
   const handleCheckout = async () => {
-    setShowCheckoutConfirm(false);
+    setIsProcessingCheckout(true); // NEW: Start loading indicator
 
     const payload = {
       customer_id: selectedClient,
@@ -328,8 +326,18 @@ const Transact = () => {
         setCart([]); 
         setSelectedClient(''); 
         fetchInventory(); 
+        setShowCheckoutConfirm(false); // NEW: Close confirmation modal only AFTER success
+      } else {
+        alert("Failed to process checkout. Please try again.");
+        setShowCheckoutConfirm(false);
       }
-    } catch (error) { console.error("Error during checkout:", error); }
+    } catch (error) { 
+      console.error("Error during checkout:", error); 
+      alert("Network error during checkout.");
+      setShowCheckoutConfirm(false);
+    } finally {
+      setIsProcessingCheckout(false); // NEW: Stop loading indicator
+    }
   };
 
   const triggerToast = (message, type = 'success') => {
@@ -351,7 +359,7 @@ const Transact = () => {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to page 1 when searching
+    setCurrentPage(1); 
   };
 
 
@@ -467,7 +475,7 @@ const Transact = () => {
                 type="text" 
                 placeholder="Search products or scan barcode..." 
                 value={searchTerm}
-                onChange={handleSearchChange} // UPDATED: Calls handleSearchChange to reset pagination
+                onChange={handleSearchChange} 
                 onKeyDown={handleBarcodeScan}
                 style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '4px', border: '1px solid #d32f2f', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }}
                 autoFocus
@@ -478,8 +486,7 @@ const Transact = () => {
               <table className="inventory-table">
                 <thead>
                   <tr>
-                     {/* UPDATED: Bold table headers */}
-                     <th style={{ width: '7%', fontWeight: 'bold', color: '#333' }}>ID / Barcode</th>
+                    <th style={{ width: '7%', fontWeight: 'bold', color: '#333' }}>ID / Barcode</th>
                     <th style={{ width: '10%', fontWeight: 'bold', color: '#333' }}>Product</th>
                     <th style={{ width: '5%', fontWeight: 'bold', color: '#333' }}>Price</th>
                     <th style={{ width: '10%', textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Stock</th>
@@ -487,7 +494,6 @@ const Transact = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* UPDATED: Map over paginatedInventory instead of filteredInventory */}
                   {paginatedInventory.map(p => (
                     <tr key={p.product_id}>
                       <td style={{ textAlign: 'center' }}>{p.product_id}</td>
@@ -514,7 +520,7 @@ const Transact = () => {
               </table>
             </div>
             
-            {/* NEW: Uniform Pagination */}
+            {/* Uniform Pagination */}
             {totalInventoryPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
                 <button
@@ -713,15 +719,17 @@ const Transact = () => {
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                 <button
                   onClick={() => setShowCheckoutConfirm(false)}
-                  style={{ padding: '10px 28px', borderRadius: '4px', border: '1px solid #ccc', background: '#f1f2f6', color: '#555', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                  disabled={isProcessingCheckout}
+                  style={{ padding: '10px 28px', borderRadius: '4px', border: '1px solid #ccc', background: '#f1f2f6', color: '#555', cursor: isProcessingCheckout ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px', opacity: isProcessingCheckout ? 0.7 : 1 }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCheckout}
-                  style={{ padding: '10px 28px', borderRadius: '4px', border: 'none', background: '#ac372f', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                  disabled={isProcessingCheckout}
+                  style={{ padding: '10px 28px', borderRadius: '4px', border: 'none', background: '#ac372f', color: 'white', cursor: isProcessingCheckout ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px', opacity: isProcessingCheckout ? 0.7 : 1 }}
                 >
-                  Yes, Proceed
+                  {isProcessingCheckout ? 'Processing...' : 'Yes, Proceed'}
                 </button>
               </div>
             </div>
@@ -759,29 +767,33 @@ const Transact = () => {
             `}
           </style>
 
-          <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div 
+            className="modal-overlay" 
+            style={{ zIndex: 9999 }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setInvoiceData(null);
+            }}
+          >
             <div className="add-user-modal" style={{ maxWidth: '800px', padding: '0', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
               
               <div id="printable-invoice" style={{ padding: '40px', background: 'white', color: 'black', fontFamily: 'Arial, sans-serif' }}>
                 
                 <div style={{ position: 'relative', textAlign: 'center', marginBottom: '20px' }}>
-                  <div style={{ position: 'absolute', top: 0, right: 0, textAlign: 'right', fontSize: '12px' }}>
+                  <div style={{ position: 'absolute', top: 0, right: 0, textAlign: 'right', fontSize: '11px' }}>
                     <div>Invoice</div>
                     <div>Invoice No: {invoiceData.sales_id}</div>
                     <div>Date: {invoiceData.date}</div>
-                    <div>Time: {invoiceData.time}</div>
                   </div>
 
-                  <img src={logo} alt="Ergin Hardware" style={{ height: '60px', marginBottom: '10px' }} />
+                  <img src={logo} alt="Ergin Hardware" style={{ height: '50px', marginBottom: '5px' }} />
                   <div style={{ fontSize: '14px', fontWeight: 'bold' }}>ERGIN HARDWARE AND CONSTRUCTION SUPPLY TRADING</div>
-                  <div style={{ fontSize: '12px' }}>Bomba Street, Salvacion, Murcia, Negros Occidental</div>
-                  <div style={{ fontSize: '12px' }}>GINA T. PENAFIEL – Prop.</div>
-                  <div style={{ fontSize: '12px' }}>NON-VAT REG. TIN 935-125-855-000</div>
+                  <div style={{ fontSize: '11px' }}>Bomba Street, Salvacion, Murcia, Negros Occidental</div>
+                  <div style={{ fontSize: '11px' }}>GINA T. PENAFIEL – Prop.</div>
                   
-                  <h2 style={{ margin: '15px 0 5px 0', fontSize: '20px', fontWeight: 'bold', letterSpacing: '1px' }}>CHARGE SALES INVOICE</h2>
+                  <h2 style={{ margin: '15px 0 15px 0', fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px' }}>CHARGE SALES INVOICE</h2>
                 </div>
 
-                <div style={{ fontSize: '13px', lineHeight: '1.8', marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '20px' }}>
                   <div style={{ display: 'flex' }}>
                     <span style={{ width: '80px' }}>Charged to:</span>
                     <span style={{ flex: 1, borderBottom: '1px solid black', paddingLeft: '10px' }}>{invoiceData.client?.name}</span>
@@ -800,7 +812,7 @@ const Transact = () => {
                   </div>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', textAlign: 'left' }}>
                       <th style={{ padding: '8px 0', width: '10%' }}>Qty.</th>
@@ -823,7 +835,7 @@ const Transact = () => {
                   </tbody>
                 </table>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '13px', marginBottom: '20px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '12px', marginBottom: '20px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
                   <div style={{ width: '250px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                       <span>SubTotal:</span>
@@ -840,23 +852,12 @@ const Transact = () => {
                   </div>
                 </div>
                 
-                <div style={{ borderBottom: '1px solid #ccc', marginBottom: '20px' }}></div>
-
-                <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
-                  <p style={{ textDecoration: 'underline', color: '#0056b3', marginBottom: '15px' }}>
+                <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
+                  <p style={{ textDecoration: 'underline', color: '#0056b3', marginBottom: '30px' }}>
                     Received the above in good condition. Parties expressly submit themselves to the jurisdiction of the Courts of Bacolod City, any legal action arising out of this transaction and to pay 25% attorney's fees fine of suit. Interest of 2% per month will be charged on overdue accounts.
                   </p>
                   
-                  <div style={{ marginBottom: '15px', color: '#000' }}>
-                    <div>BIR ATP No.: 077AU2023000005590</div>
-                    <div>Date Issued: July 17, 2023</div>
-                  </div>
-
-                  <div style={{ fontWeight: 'bold', marginBottom: '40px', color: '#000' }}>
-                    THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAXES
-                  </div>
-
-                  <div style={{ textAlign: 'center', width: '300px', margin: '0 auto' }}>
+                  <div style={{ textAlign: 'center', width: '250px', margin: '0 auto' }}>
                     <div style={{ borderBottom: '1px solid black', height: '20px', marginBottom: '5px' }}></div>
                     <div>CLIENT</div>
                     <div>(Please sign over printed name)</div>
@@ -864,13 +865,7 @@ const Transact = () => {
                 </div>
               </div>
 
-              <div className="modal-footer no-print" style={{ background: '#f9f9f9', padding: '15px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button 
-                  onClick={() => setInvoiceData(null)} 
-                  style={{ background: 'transparent', color: '#7f8c8d', padding: '10px 20px', border: 'none', cursor: 'pointer' }}
-                >
-                  Close
-                </button>
+              <div className="modal-footer no-print" style={{ background: '#f9f9f9', padding: '15px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee' }}>
                 <button 
                   onClick={() => window.print()} 
                   style={{ background: '#f1f2f6', color: '#2c3e50', padding: '10px 20px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
