@@ -7,20 +7,15 @@ import Sidebar from './Sidebar';
 import logo from './assets/logotrans.png';
 
 // Sidebar nav icons
-//import dashboardIcon from './assets/dashboard_header icon.png';
-//import inventoryIcon from './assets/inventory_header icon.png';
-//import salesRecordIcon from './assets/salesrecord_header icon.png';
-//import userAccessIcon from './assets/useracess_header icon.png';
 import transactIcon from './assets/transact_pos header.png';
-//import generateReportIcon from './assets/generate report_ header icon.png';
-//import supplierIcon from './assets/supplier_header icon.png';
-//import clientIcon from './assets/client_header icon.png';
 import searchIcon from './assets/supplier_search button.png';
 import Logout from './Logout';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
+
+const ROWS_PER_PAGE = 8; // NEW: Added pagination constant
   
 const Transact = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -34,6 +29,7 @@ const Transact = () => {
   const [selectedClient, setSelectedClient] = useState('');
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1); // NEW: Pagination state
 
   // --- MODAL STATES ---
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -341,10 +337,22 @@ const Transact = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
+  // --- FILTER & PAGINATION LOGIC ---
   const filteredInventory = inventory.filter(p => 
     p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.product_id.toString().includes(searchTerm)
   );
+
+  const totalInventoryPages = Math.ceil(filteredInventory.length / ROWS_PER_PAGE);
+  const paginatedInventory = filteredInventory.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 when searching
+  };
 
 
   return (
@@ -459,7 +467,7 @@ const Transact = () => {
                 type="text" 
                 placeholder="Search products or scan barcode..." 
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange} // UPDATED: Calls handleSearchChange to reset pagination
                 onKeyDown={handleBarcodeScan}
                 style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '4px', border: '1px solid #d32f2f', fontSize: '16px', outline: 'none', boxSizing: 'border-box' }}
                 autoFocus
@@ -470,15 +478,17 @@ const Transact = () => {
               <table className="inventory-table">
                 <thead>
                   <tr>
-                     <th style={{ width: '7%'}}>ID / Barcode</th>
-                    <th style={{ width: '10%' }}>Product</th>
-                    <th style={{ width: '5%' }}>Price</th>
-                    <th style={{ width: '10%', textAlign: 'center' }}>Stock</th>
-                    <th style={{ width: '10%', textAlign: 'center' }}>Action</th>
+                     {/* UPDATED: Bold table headers */}
+                     <th style={{ width: '7%', fontWeight: 'bold', color: '#333' }}>ID / Barcode</th>
+                    <th style={{ width: '10%', fontWeight: 'bold', color: '#333' }}>Product</th>
+                    <th style={{ width: '5%', fontWeight: 'bold', color: '#333' }}>Price</th>
+                    <th style={{ width: '10%', textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Stock</th>
+                    <th style={{ width: '10%', textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInventory.map(p => (
+                  {/* UPDATED: Map over paginatedInventory instead of filteredInventory */}
+                  {paginatedInventory.map(p => (
                     <tr key={p.product_id}>
                       <td style={{ textAlign: 'center' }}>{p.product_id}</td>
                       <td style={{ fontWeight: 'bold' }}>{p.product_name}</td>
@@ -497,12 +507,61 @@ const Transact = () => {
                       </td>
                     </tr>
                   ))}
-                  {filteredInventory.length === 0 && (
+                  {paginatedInventory.length === 0 && (
                     <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No products found.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
+            
+            {/* NEW: Uniform Pagination */}
+            {totalInventoryPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    background: currentPage === 1 ? '#eee' : '#d10000',
+                    color: currentPage === 1 ? '#aaa' : 'white',
+                    border: 'none', borderRadius: '4px', padding: '6px 12px',
+                    cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 'bold'
+                  }}>
+                  ← Prev
+                </button>
+
+                {Array.from({ length: totalInventoryPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      background: currentPage === page ? '#d10000' : 'white',
+                      color: currentPage === page ? 'white' : '#333',
+                      border: '1px solid #ddd', borderRadius: '4px',
+                      padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold',
+                      minWidth: '34px'
+                    }}>
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalInventoryPages))}
+                  disabled={currentPage === totalInventoryPages}
+                  style={{
+                    background: currentPage === totalInventoryPages ? '#eee' : '#d10000',
+                    color: currentPage === totalInventoryPages ? '#aaa' : 'white',
+                    border: 'none', borderRadius: '4px', padding: '6px 12px',
+                    cursor: currentPage === totalInventoryPages ? 'default' : 'pointer', fontWeight: 'bold'
+                  }}>
+                  Next →
+                </button>
+
+                <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                  Page {currentPage} of {totalInventoryPages} ({filteredInventory.length} records)
+                </span>
+              </div>
+            )}
+
           </div>
 
           {/* RIGHT SIDE: Cart & Checkout */}

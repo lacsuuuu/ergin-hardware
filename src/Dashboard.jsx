@@ -25,12 +25,16 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
   ? 'http://127.0.0.1:5000'
   : 'https://ergin-hardware.onrender.com';
 
+const RESTOCK_PER_PAGE = 7; // NEW: Pagination limit designed to perfectly match the height of the chart
+
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const currentRole = localStorage.getItem('currentRole');
   const isAdmin = currentRole === 'Admin';
+
+  const [currentRestockPage, setCurrentRestockPage] = useState(1); // NEW: Pagination state
 
   const [dashboardData, setDashboardData] = useState({
     total_revenue: 0,
@@ -77,6 +81,12 @@ const Dashboard = () => {
       return acc;
     }, []);
 
+  // NEW: Pagination calculations for Low Stock Items
+  const totalRestockPages = Math.ceil(dashboardData.low_stock_items.length / RESTOCK_PER_PAGE);
+  const paginatedRestockItems = dashboardData.low_stock_items.slice(
+    (currentRestockPage - 1) * RESTOCK_PER_PAGE,
+    currentRestockPage * RESTOCK_PER_PAGE
+  );
 
   const kpiItem = (label, value, red = false, lastItem = false) => (
     <div style={{
@@ -176,7 +186,8 @@ const Dashboard = () => {
                 Needs Restock (≤ 10)
               </h3>
               <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
-                {dashboardData.low_stock_items.map(item => (
+                {/* UPDATED: Map over paginated items instead of all items */}
+                {paginatedRestockItems.map(item => (
                   <li key={item.product_id} style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '7px 0', borderBottom: '1px solid #f5f5f5'
@@ -204,12 +215,57 @@ const Dashboard = () => {
                     </div>
                   </li>
                 ))}
-                {dashboardData.low_stock_items.length === 0 && (
+                {paginatedRestockItems.length === 0 && (
                   <li style={{ padding: '10px 0', color: '#7f8c8d', textAlign: 'center', fontSize: '11px' }}>
                     All stock levels OK!
                   </li>
                 )}
               </ul>
+
+              {/* NEW: Uniform Pagination Controls (Scaled slightly for the smaller panel) */}
+              {totalRestockPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginTop: '12px' }}>
+                  <button
+                    onClick={() => setCurrentRestockPage(p => Math.max(p - 1, 1))}
+                    disabled={currentRestockPage === 1}
+                    style={{
+                      background: currentRestockPage === 1 ? '#eee' : '#d10000',
+                      color: currentRestockPage === 1 ? '#aaa' : 'white',
+                      border: 'none', borderRadius: '4px', padding: '4px 8px',
+                      cursor: currentRestockPage === 1 ? 'default' : 'pointer', fontWeight: 'bold', fontSize: '10px'
+                    }}>
+                    ← Prev
+                  </button>
+
+                  {Array.from({ length: totalRestockPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentRestockPage(page)}
+                      style={{
+                        background: currentRestockPage === page ? '#d10000' : 'white',
+                        color: currentRestockPage === page ? 'white' : '#333',
+                        border: '1px solid #ddd', borderRadius: '4px',
+                        padding: '4px 8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '10px',
+                        minWidth: '24px'
+                      }}>
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentRestockPage(p => Math.min(p + 1, totalRestockPages))}
+                    disabled={currentRestockPage === totalRestockPages}
+                    style={{
+                      background: currentRestockPage === totalRestockPages ? '#eee' : '#d10000',
+                      color: currentRestockPage === totalRestockPages ? '#aaa' : 'white',
+                      border: 'none', borderRadius: '4px', padding: '4px 8px',
+                      cursor: currentRestockPage === totalRestockPages ? 'default' : 'pointer', fontWeight: 'bold', fontSize: '10px'
+                    }}>
+                    Next →
+                  </button>
+                </div>
+              )}
+
             </div>
 
           </div>
