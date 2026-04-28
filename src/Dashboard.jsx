@@ -113,7 +113,7 @@ const Dashboard = () => {
               <img src={dashboardIcon} alt="" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
               <h2 style={{ margin: 0 }}>Business Dashboard</h2>
             </div>
-            <TopHeader />
+            <TopHeader userData={{ role: currentRole }} />
           </header>
 
           <hr className="divider" style={{ margin: '0', flexShrink: 0 }} />

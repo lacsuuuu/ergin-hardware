@@ -11,7 +11,7 @@ const TopHeader = ({ userData, onUpdateSuccess }) => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
+console.log("REAL USER DATA:", userData);
   return (
     <div className="admin-info" style={{ textAlign: 'right', marginBottom: '20px' }}>
       
@@ -22,7 +22,7 @@ const TopHeader = ({ userData, onUpdateSuccess }) => {
       
       {/* Dynamic Role Display */}
       <p className="welcome-text" style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
-        Welcome, <span style={{ fontWeight: 'bold', color: '#2980b9' }}>{userData?.user_role || 'Admin'}</span>
+        Welcome, <span style={{ fontWeight: 'bold', color: '#2980b9' }}>{userData?.role}</span>
       </p>
       
       {/* Update Button */}

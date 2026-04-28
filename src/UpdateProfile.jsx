@@ -45,7 +45,7 @@ const UpdateProfileModal = ({ isOpen, onClose, userData, onUpdateSuccess }) => {
         age: userData.birthday ? calculateAge(userData.birthday) : (userData.age || ''),
         birthday: userData.birthday || '',
         password: '', 
-        role: userData.user_role || 'Admin'
+        role: userData.role || ''
       });
       setMessage({ text: '', type: '' }); 
     }
