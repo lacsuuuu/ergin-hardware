@@ -5,36 +5,24 @@ import TopHeader from './TopHeader';
 
 import Sidebar from './Sidebar';
 import clientIcon from './assets/client_header icon.png';
-import searchIcon from './assets/supplier_search button.png'; // Added search icon import
-
-// Sidebar nav icons
-//import dashboardIcon from './assets/dashboard_header icon.png';
-//import inventoryIcon from './assets/inventory_header icon.png';
-//import salesRecordIcon from './assets/salesrecord_header icon.png';
-//import userAccessIcon from './assets/useracess_header icon.png';
-//import transactIcon from './assets/transact_pos header.png';
-//import generateReportIcon from './assets/generate report_ header icon.png';
-//import supplierIcon from './assets/supplier_header icon.png';
-//import Logout from './Logout';
-//import logo from './assets/logotrans.png';
+import searchIcon from './assets/supplier_search button.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
   : 'https://ergin-hardware.onrender.com';
 
-const ROWS_PER_PAGE = 8; // Pagination constant
+const ROWS_PER_PAGE = 8;
 
 const Clients = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1); // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // --- MODAL & ACTION STATES ---
   const [showModal, setShowModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false); // ADDED
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
-  const [activeDropdown, setActiveDropdown] = useState(null); // ADDED
+  const [activeDropdown, setActiveDropdown] = useState(null);
 
   const [showEditDiscardModal, setShowEditDiscardModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -42,27 +30,22 @@ const Clients = () => {
   const [originalEditData, setOriginalEditData] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  // --- DATA STATE ---
   const [clients, setClients] = useState([]);
   
-  // Matches the 'customer' table columns
   const [formData, setFormData] = useState({
     name: '', address: '', contact: '', email: '', business_style: '', tin: ''
   });
 
-  // Edit form data — ADDED
   const [editData, setEditData] = useState({
     customer_id: '', name: '', address: '', contact: '', email: '', business_style: '', tin: ''
   });
 
-  // --- EFFECTS ---
   useEffect(() => {
     fetchClients();
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // --- API CALLS ---
   const fetchClients = async () => {
     try {
       const response = await fetch(`${API_URL}/api/clients`);
@@ -94,7 +77,6 @@ const Clients = () => {
     }
   };
 
-  // ADDED: Handle update client
   const handleUpdateClient = async (e) => {
     e.preventDefault();
     try {
@@ -116,7 +98,6 @@ const Clients = () => {
     }
   };
 
-  // --- HELPERS ---
   const triggerToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
@@ -134,7 +115,6 @@ const Clients = () => {
     setFormData({ name: '', address: '', contact: '', email: '', business_style: '', tin: '' });
   };
 
-  // ADDED: Open edit modal
 const handleEdit = (client) => {
   const data = {
     customer_id: client.customer_id,
@@ -151,7 +131,6 @@ const handleEdit = (client) => {
   setActiveDropdown(null);
 };
 
-  // ADDED: Archive handler
 const handleArchive = (client) => {
   setSelectedClient(client);
   setShowArchiveModal(true);
@@ -168,7 +147,6 @@ const handleArchiveSubmit = async () => {
     });
 
     if (response.ok) {
-      // Update local state instantly — no need to re-fetch
       setClients(prev => prev.map(c =>
         c.customer_id === selectedClient.customer_id
           ? { ...c, is_archived: newStatus }
@@ -176,7 +154,6 @@ const handleArchiveSubmit = async () => {
       ));
       triggerToast(newStatus ? `${selectedClient.name} has been archived.` : `${selectedClient.name} has been restored.`);
     } else {
-      // Backend route may not exist yet — still update locally so UI works
       setClients(prev => prev.map(c =>
         c.customer_id === selectedClient.customer_id
           ? { ...c, is_archived: newStatus }
@@ -185,7 +162,6 @@ const handleArchiveSubmit = async () => {
       triggerToast(newStatus ? `${selectedClient.name} archived (local only).` : `${selectedClient.name} restored (local only).`);
     }
   } catch (err) {
-    // Fallback: still apply locally if backend isn't ready
     setClients(prev => prev.map(c =>
       c.customer_id === selectedClient.customer_id
         ? { ...c, is_archived: !c.is_archived }
@@ -214,7 +190,6 @@ const closeEditFormCompletely = () => {
   setShowEditModal(false);
 };
 
-  // --- FILTER & PAGINATION LOGIC ---
   const filteredClients = clients.filter(c => {
     const matchesSearch =
       (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -231,14 +206,11 @@ const closeEditFormCompletely = () => {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to page 1 when searching
+    setCurrentPage(1);
   };
-
 
   return (
     <div className="outer-margin-container">
-      
-      {/* FIXED TOAST NOTIFICATION: Styled to match system theme */}
       {toast.show && (
         <div 
           style={{ 
@@ -277,8 +249,7 @@ const closeEditFormCompletely = () => {
 
           <hr className="divider" />
 
-          <div className="supplier-controls" style={{ marginBottom: '16px' }}>
-            {/* Search Bar with Icon */}
+          <div className="supplier-controls" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
               <img 
                 src={searchIcon} 
@@ -297,18 +268,25 @@ const closeEditFormCompletely = () => {
                 style={{ paddingLeft: '36px', width: '100%' }} 
               />
             </div>
-            <button className="add-supplier-btn" onClick={() => setShowModal(true)}>Add Client</button>
-            <button
-              onClick={() => setShowArchived(p => !p)}
-              style={{
-                padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
-                background: showArchived ? '#555' : '#f1f2f6',
-                color: showArchived ? 'white' : '#555',
-                fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
-              }}
-            >
-              {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
-            </button>
+            
+            {/* Add Client is now first, Show Archived is second */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button className="add-supplier-btn" onClick={() => setShowModal(true)} style={{ margin: 0 }}>
+                Add Client
+              </button>
+
+              <button
+                onClick={() => setShowArchived(p => !p)}
+                style={{
+                  padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                  background: showArchived ? '#555' : '#f1f2f6',
+                  color: showArchived ? 'white' : '#555',
+                  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+              </button>
+            </div>
           </div>
 
           <div className="table-container shadow-box">
@@ -322,7 +300,7 @@ const closeEditFormCompletely = () => {
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Address</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>Business Style</th>
                   <th style={{ fontWeight: 'bold', color: '#333' }}>TIN</th>
-                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>{/* ADDED */}
+                  <th style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +322,6 @@ const closeEditFormCompletely = () => {
                       <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.business_style}</td>
                       <td style={{ padding: '12px', color: c.is_archived ? '#999' : undefined }}>{c.tin}</td>
 
-                      {/* ADDED: Action dropdown column */}
                       <td style={{ position: 'relative', textAlign: 'center', overflow: 'visible', padding: '12px' }}>
                         <button
                           onClick={() => setActiveDropdown(activeDropdown === c.customer_id ? null : c.customer_id)}
@@ -399,7 +376,6 @@ const closeEditFormCompletely = () => {
             </table>
           </div>
 
-          {/* Uniform Pagination */}
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
               <button
@@ -450,7 +426,6 @@ const closeEditFormCompletely = () => {
         </main>
       </div>
 
-      {/* --- ADD CLIENT MODAL --- */}
       {showModal && (
         <div className="modal-overlay">
           <div className="add-user-modal"> 
@@ -512,7 +487,6 @@ const closeEditFormCompletely = () => {
         </div>
       )}
 
-      {/* --- Edit CLIENT MODAL --- ADDED */}
       {showEditModal && (
         <div className="modal-overlay">
           <div className="add-user-modal">
@@ -574,7 +548,6 @@ const closeEditFormCompletely = () => {
         </div>
       )}
 
-      {/* --- DISCARD CHANGES MODAL --- */}
       {showDiscardModal && (
         <div className="modal-overlay alert-overlay">
           <div className="delete-confirm-modal">
@@ -598,7 +571,6 @@ const closeEditFormCompletely = () => {
         </div>
       )}
 
-      {/* ── MODAL: DISCARD EDIT CLIENT ── */}
 {showEditDiscardModal && (
   <div className="modal-overlay alert-overlay">
     <div className="delete-confirm-modal">
@@ -621,7 +593,6 @@ const closeEditFormCompletely = () => {
   </div>
 )}
 
-{/* ── MODAL: ARCHIVE CLIENT ── */}
 {showArchiveModal && selectedClient && (
   <div className="modal-overlay alert-overlay">
     <div className="delete-confirm-modal" style={{ background: 'white', borderRadius: '12px', width: '400px', overflow: 'hidden' }}>
@@ -649,7 +620,5 @@ const closeEditFormCompletely = () => {
     </div>
   );
 };
-
-
 
 export default Clients;

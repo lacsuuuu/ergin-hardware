@@ -288,8 +288,9 @@ const closeEditFormCompletely = () => {
           <hr className="divider" />
 
           {/* Compressed margin to save vertical space matching Sales Ledger */}
-          <div className="supplier-controls" style={{ marginBottom: '16px' }}>
-            <div className="search-wrapper" style={{ position: 'relative' }}>
+          {/* Modified Button Placement: Add Staff first, Archive second */}
+          <div className="supplier-controls" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
               <img 
                 src={searchIcon} 
                 alt="Search" 
@@ -304,21 +305,27 @@ const closeEditFormCompletely = () => {
                 className="search-input" 
                 value={searchTerm} 
                 onChange={handleSearchChange} 
-                style={{ paddingLeft: '36px' }} 
+                style={{ paddingLeft: '36px', width: '100%' }} 
               />
             </div>
-            <button className="add-supplier-btn" onClick={() => setShowModal(true)}>+ Add Staff Account</button>
-            <button
-              onClick={() => setShowArchived(p => !p)}
-              style={{
-                padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
-                background: showArchived ? '#555' : '#f1f2f6',
-                color: showArchived ? 'white' : '#555',
-                fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
-              }}
-            >
-              {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
-            </button>
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button className="add-supplier-btn" onClick={() => setShowModal(true)} style={{ margin: 0 }}>
+                + Add Staff Account
+              </button>
+
+              <button
+                onClick={() => setShowArchived(p => !p)}
+                style={{
+                  padding: '8px 14px', borderRadius: '4px', border: '1px solid #ccc',
+                  background: showArchived ? '#555' : '#f1f2f6',
+                  color: showArchived ? 'white' : '#555',
+                  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                {showArchived ? '👁 Hide Archived' : '👁 Show Archived'}
+              </button>
+            </div>
           </div>
 
           <div className="table-container shadow-box">
