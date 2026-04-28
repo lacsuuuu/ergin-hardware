@@ -553,7 +553,7 @@ def get_employees():
             user_info = users.get(u_id, {})
             emp['username'] = user_info.get('username', 'No Account')
             emp['role'] = user_info.get('role', 'Unassigned')
-            emp['status'] = emp.get('status', 'Active') #dagdag ng status 
+            emp['status'] = user_info.get('status', 'Active') #dagdag ng status 
             
         return jsonify(employees), 200
     except Exception as e:
@@ -619,9 +619,16 @@ def update_employee_status(emp_id):
         data = request.json
         status = data.get("status")
 
-        supabase.table('employee') \
+        emp_res = supabase.table('employee').select('User_ID').eq('employee_id', emp_id).execute()
+        if not emp_res.data:
+            return jsonify({"error": "Employee not found"}), 404
+        
+        user_id = emp_res.data[0]['User_ID']
+
+        #dito pala update status sa supabase
+        supabase.table('users') \
             .update({"status": status}) \
-            .eq('employee_id', emp_id) \
+            .eq('id', user_id) \
             .execute()
 
         return jsonify({"success": True}), 200
