@@ -214,13 +214,13 @@ const openEditModal = (supplier) => {
         setSuppliers(prev => prev.map(s =>
           s.supplier_id === selectedSupplier.supplier_id ? { ...s, is_archived: newStatus } : s
         ));
-        triggerToast(newStatus ? `${selectedSupplier.supplier_name} archived.` : `${selectedSupplier.supplier_name} restored .`);
+        triggerToast(newStatus ? `${selectedSupplier.supplier_name} archived (local only).` : `${selectedSupplier.supplier_name} restored (local only).`);
       }
     } catch (err) {
       setSuppliers(prev => prev.map(s =>
         s.supplier_id === selectedSupplier.supplier_id ? { ...s, is_archived: !s.is_archived } : s
       ));
-      triggerToast(`${selectedSupplier.supplier_name} archived .`);
+      triggerToast(`${selectedSupplier.supplier_name} archived (local only).`);
     }
     setShowArchiveModal(false);
     setSelectedSupplier(null);
@@ -442,14 +442,16 @@ const closeEditFormCompletely = () => {
                               zIndex: 10, display: 'flex', flexDirection: 'column',
                               width: '130px', overflow: 'hidden'
                             }}>
-                              <button
-                                onClick={() => openEditModal(sup)}
-                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
-                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
-                                onMouseOut={(e) => e.target.style.background = 'white'}
-                              >
-                                 Edit
-                              </button>
+                              {!sup.is_archived && (
+                                <button
+                                  onClick={() => openEditModal(sup)}
+                                  style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                  onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
+                                  onMouseOut={(e) => e.target.style.background = 'white'}
+                                >
+                                   Edit
+                                </button>
+                              )}
                               <button
                                 onClick={() => openArchiveModal(sup)}
                                 style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
