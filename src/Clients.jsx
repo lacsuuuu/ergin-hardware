@@ -366,14 +366,16 @@ const closeEditFormCompletely = () => {
                               zIndex: 10, display: 'flex', flexDirection: 'column',
                               width: '130px', overflow: 'hidden'
                             }}>
-                              <button
-                                onClick={() => handleEdit(c)}
-                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
-                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
-                                onMouseOut={(e) => e.target.style.background = 'white'}
-                              >
-                                 Edit
-                              </button>
+                              {!c.is_archived && (
+                                <button
+                                  onClick={() => handleEdit(c)}
+                                  style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                  onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
+                                  onMouseOut={(e) => e.target.style.background = 'white'}
+                                >
+                                   Edit
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleArchive(c)}
                                 style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}

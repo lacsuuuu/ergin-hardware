@@ -406,22 +406,26 @@ const openArchiveModal = (product) => {
                               zIndex: 10, display: 'flex', flexDirection: 'column',
                               width: '130px', overflow: 'hidden'
                             }}>
-                              <button
-                                onClick={() => openEditModal(product)}
-                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
-                                onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
-                                onMouseOut={(e) => e.target.style.background = 'white'}
-                              >
-                                 Edit
-                              </button>
-                              <button
-                                onClick={() => openBatchReport(product)}
-                                style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
-                                onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
-                                onMouseOut={(e) => e.target.style.background = 'white'}
-                              >
-                                 Batches
-                              </button>
+                              {!product.is_archived && (
+                                <>
+                                  <button
+                                    onClick={() => openEditModal(product)}
+                                    style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                    onMouseOver={(e) => e.target.style.background = '#f4f8fb'}
+                                    onMouseOut={(e) => e.target.style.background = 'white'}
+                                  >
+                                     Edit
+                                  </button>
+                                  <button
+                                    onClick={() => openBatchReport(product)}
+                                    style={{ padding: '10px 14px', border: 'none', background: 'white', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f0f0f0', fontSize: '13px', fontWeight: '600', color: '#333' }}
+                                    onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
+                                    onMouseOut={(e) => e.target.style.background = 'white'}
+                                  >
+                                     Batches
+                                  </button>
+                                </>
+                              )}
                               <button onClick={() => openArchiveModal(product)} style={{ padding: '10px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#e74c3c' }}
                                 onMouseOver={(e) => e.target.style.background = '#fdf3f2'}
                                 onMouseOut={(e) => e.target.style.background = 'none'}
@@ -573,7 +577,7 @@ const openArchiveModal = (product) => {
               {/* Footer Styled like UserAccess */}
               <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '16px' }}>
                 <button type="button" className="cancel-btn" onClick={handleCloseAttempt} style={{ background: '#f1f2f6', color: '#333', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Product</button>
+                <button type="submit" className="save-btn" style={{ background: '#d10000', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save Profile</button>
               </div>
             </form>
           </div>
