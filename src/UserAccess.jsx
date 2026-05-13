@@ -214,15 +214,22 @@ const handleArchiveSubmit = async () => {
     ));
     triggerToast(`${selectedEmployee.name} archived (local only).`);
   }
+
+  // AUTO-SWITCH VIEW: if archiving, switch to archived view so user can see it
+  if (!selectedEmployee.is_archived) {
+    setShowArchived(true);
+  } else {
+    setShowArchived(false);
+  }
+
   setShowArchiveModal(false);
   setSelectedEmployee(null);
 };
-
   const filteredEmployees = employees.filter(e => {
     const matchesSearch =
       e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       e.username?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesArchive = showArchived ? true : !e.is_archived;
+    const matchesArchive = showArchived ? e.is_archived : !e.is_archived;
     return matchesSearch && matchesArchive;
   });
 

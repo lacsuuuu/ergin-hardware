@@ -5,15 +5,7 @@ import TopHeader from './TopHeader';
 import Logout from './Logout';
 import Sidebar from './Sidebar';
 
-// Sidebar nav icons
-//import dashboardIcon from './assets/dashboard_header icon.png';
-//import inventoryIcon from './assets/inventory_header icon.png';
-//import salesRecordIcon from './assets/salesrecord_header icon.png';
-//import userAccessIcon from './assets/useracess_header icon.png';
-//import transactIcon from './assets/transact_pos header.png';
 import generateReportIcon from './assets/generate report_ header icon.png';
-//import supplierIcon from './assets/supplier_header icon.png';
-//import clientIcon from './assets/client_header icon.png';
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:5000' 
@@ -22,19 +14,20 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
 const GenerateReport = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Report State
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportData, setReportData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeQuick, setActiveQuick] = useState(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // --- QUICK DATE HELPERS ---
   const toDateStr = (d) => d.toISOString().split('T')[0];
 
   const applyQuickRange = (label) => {
@@ -85,6 +78,7 @@ const GenerateReport = () => {
       if (response.ok) {
         const data = await response.json();
         setReportData(data);
+        setCurrentPage(1);
       } else {
         alert("Failed to generate report.");
       }
@@ -95,11 +89,14 @@ const GenerateReport = () => {
     }
   };
 
-  // --- BAR CHART COMPONENT ---
+  const totalPages = reportData ? Math.ceil(reportData.sales_data.length / ROWS_PER_PAGE) : 1;
+  const paginatedSales = reportData
+    ? reportData.sales_data.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE)
+    : [];
+
   const BarChart = ({ salesData }) => {
     if (!salesData || salesData.length === 0) return null;
 
-    // Group by date
     const grouped = {};
     salesData.forEach(sale => {
       if (!grouped[sale.date]) grouped[sale.date] = 0;
@@ -123,7 +120,6 @@ const GenerateReport = () => {
     const barGroupWidth = barAreaWidth / barCount;
     const barWidth = Math.min(barGroupWidth * 0.55, 55);
 
-    // Y-axis ticks
     const tickCount = 4;
     const yTicks = Array.from({ length: tickCount + 1 }, (_, i) => (maxVal / tickCount) * i);
 
@@ -151,7 +147,6 @@ const GenerateReport = () => {
             height={chartHeight}
             style={{ display: 'block' }}
           >
-            {/* Y-axis gridlines & labels */}
             {yTicks.map((tick, i) => {
               const y = padTop + barAreaHeight - (tick / maxVal) * barAreaHeight;
               return (
@@ -168,7 +163,6 @@ const GenerateReport = () => {
               );
             })}
 
-            {/* Bars */}
             {labels.map((label, i) => {
               const x = getX(i);
               const bh = getBarHeight(values[i]);
@@ -181,14 +175,12 @@ const GenerateReport = () => {
                     fill="#d32f2f" rx="3" ry="3"
                     opacity="0.85"
                   />
-                  {/* Value label on top of bar */}
                   <text
                     x={x + barWidth / 2} y={y - 7}
                     textAnchor="middle" fontSize="12" fill="#2c3e50" fontWeight="bold"
                   >
                     {formatAmt(values[i])}
                   </text>
-                  {/* X-axis date label */}
                   <text
                     x={x + barWidth / 2}
                     y={padTop + barAreaHeight + 20}
@@ -200,13 +192,11 @@ const GenerateReport = () => {
               );
             })}
 
-            {/* X axis line */}
             <line
               x1={padLeft} y1={padTop + barAreaHeight}
               x2={chartWidth - padRight} y2={padTop + barAreaHeight}
               stroke="#bdc3c7" strokeWidth="1.5"
             />
-            {/* Y axis line */}
             <line
               x1={padLeft} y1={padTop}
               x2={padLeft} y2={padTop + barAreaHeight}
@@ -220,10 +210,10 @@ const GenerateReport = () => {
       </div>
     );
   };
+
   return (
     <div className="outer-margin-container">
       
-      {/* CSS to make ONLY the report print perfectly */}
       <style>
         {`
           @media print {
@@ -260,10 +250,8 @@ const GenerateReport = () => {
 
       <div className="connected-border-box">
         
-        {/* Sidebar */}
         <Sidebar />
 
-        {/* Main Content */}
         <main className="dashboard-content" style={{ display: 'flex', flexDirection: 'column' }}>
           
           <header className="main-header no-print">
@@ -276,11 +264,9 @@ const GenerateReport = () => {
 
           <hr className="divider no-print" />
 
-          {/* Filter Controls */}
           <div className="shadow-box no-print" style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
             <h3 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>Sales Summary Report Filters</h3>
 
-            {/* Quick Range Buttons */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ fontSize: '12px', color: '#7f8c8d', fontWeight: '600', marginRight: '4px' }}>Quick:</span>
               {quickButtons.map(label => (
@@ -326,7 +312,6 @@ const GenerateReport = () => {
             </form>
           </div>
 
-          {/* Generated Report Area */}
           {reportData && (
             <div id="printable-report" style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #eee', flex: 1 }}>
               
@@ -347,7 +332,6 @@ const GenerateReport = () => {
                 </div>
               </div>
 
-              {/* Bar Chart - above the summary cards */}
               {reportData.sales_data.length > 0 && (
                 <BarChart salesData={reportData.sales_data} />
               )}
@@ -372,7 +356,7 @@ const GenerateReport = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.sales_data.map((sale) => (
+                  {paginatedSales.map((sale) => (
                     <tr key={sale.sales_id}>
                       <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>{sale.date}</td>
                       <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>INV-{sale.sales_id}</td>
@@ -381,7 +365,7 @@ const GenerateReport = () => {
                       </td>
                     </tr>
                   ))}
-                  {reportData.sales_data.length === 0 && (
+                  {paginatedSales.length === 0 && (
                     <tr>
                       <td colSpan="3" style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d', fontStyle: 'italic' }}>
                         No sales found for the selected date range.
@@ -391,7 +375,62 @@ const GenerateReport = () => {
                 </tbody>
               </table>
 
-              <div style={{ marginTop: '50px', textAlign: 'center', color: '#95a5a6', fontSize: '12px' }}>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
+                  <span style={{ fontSize: '12px', color: '#888' }}>
+                    Showing {((currentPage - 1) * ROWS_PER_PAGE) + 1}–{Math.min(currentPage * ROWS_PER_PAGE, reportData.sales_data.length)} of {reportData.sales_data.length} records
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
+                        background: currentPage === 1 ? '#f5f5f5' : 'white',
+                        color: currentPage === 1 ? '#bbb' : '#333',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px', fontWeight: '600'
+                      }}
+                    >
+                      ← Prev
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        style={{
+                          padding: '5px 10px', borderRadius: '6px',
+                          border: page === currentPage ? 'none' : '1px solid #ddd',
+                          background: page === currentPage ? '#d10000' : 'white',
+                          color: page === currentPage ? 'white' : '#333',
+                          cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                          minWidth: '32px'
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd',
+                        background: currentPage === totalPages ? '#f5f5f5' : 'white',
+                        color: currentPage === totalPages ? '#bbb' : '#333',
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '12px', fontWeight: '600'
+                      }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: '20px', textAlign: 'center', color: '#95a5a6', fontSize: '12px' }}>
                 *** End of Report ***
               </div>
 

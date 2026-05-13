@@ -361,6 +361,46 @@ const Transact = () => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); 
   };
+  const handleSendEmail = async () => {
+    
+  const clientInfo = invoiceData.client;
+
+  if (!clientInfo?.email) {
+    alert("This client has no email address on file. Please update their profile in the Clients section.");
+    return;
+  }
+
+  const emailBody = {
+    to: clientInfo.email,
+    subject: `Invoice #${invoiceData.sales_id} - Ergin Hardware`,
+    sales_id: invoiceData.sales_id,
+    date: invoiceData.date,
+    client_name: clientInfo.name,
+    client_address: clientInfo.address || '',
+    client_business_style: clientInfo.business_style || '',
+    client_tin: clientInfo.tin || '',
+    items: invoiceData.items,
+    total: invoiceData.total
+  };
+
+  try {
+    const response = await fetch(`${API_URL}/api/send-invoice-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailBody)
+    });
+
+    if (response.ok) {
+      triggerToast(`Invoice sent to ${clientInfo.email}!`, 'success');
+    } else {
+      const err = await response.json();
+      alert(`Failed to send email: ${err.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    alert("Network error while sending email.");
+    console.error("Email error:", error);
+  }
+};
 
 
   return (
@@ -873,7 +913,7 @@ const Transact = () => {
                   Print
                 </button>
                 <button 
-                  onClick={() => alert("Email backend is not configured yet! Let's build that later.")} 
+                  onClick={handleSendEmail} 
                   style={{ background: '#c0392b', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                   Send Via Email

@@ -26,7 +26,8 @@ const Suppliers = () => {
   // --- STATE MANAGEMENT ---
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(''); // Added search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false); // Added search state
   const [currentPage, setCurrentPage] = useState(1); // Added pagination state
   
   // Modal Toggles
@@ -290,7 +291,8 @@ const closeEditFormCompletely = () => {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to page 1 when searching
+    setCurrentPage(1);
+    setShowSearchDropdown(e.target.value.trim().length > 0); // Reset to page 1 when searching
   };
 
   return (
@@ -341,14 +343,14 @@ const closeEditFormCompletely = () => {
           {/* Controls Area */}
           <div className="inventory-controls" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             
-            {/* Search Bar with Icon */}
+            {/* Search Bar with Dropdown */}
             <div className="search-wrapper" style={{ position: 'relative', width: '300px' }}>
               <img 
                 src={searchIcon} 
                 alt="Search" 
                 style={{
                   position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
-                  width: '18px', height: '18px', pointerEvents: 'none'
+                  width: '18px', height: '18px', pointerEvents: 'none', zIndex: 1
                 }} 
               />
               <input 
@@ -357,8 +359,41 @@ const closeEditFormCompletely = () => {
                 className="search-input"
                 value={searchTerm}
                 onChange={handleSearchChange}
+                onFocus={() => searchTerm.trim().length > 0 && setShowSearchDropdown(true)}
+                onBlur={() => setTimeout(() => setShowSearchDropdown(false), 150)}
                 style={{ paddingLeft: '36px', width: '100%' }} 
               />
+              {showSearchDropdown && filteredSuppliers.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0,
+                  background: 'white', border: '1px solid #ddd', borderRadius: '0 0 6px 6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100,
+                  maxHeight: '220px', overflowY: 'auto'
+                }}>
+                  {filteredSuppliers.slice(0, 8).map(sup => (
+                    <div
+                      key={sup.supplier_id}
+                      onMouseDown={() => {
+                        setSearchTerm(sup.supplier_name);
+                        setShowSearchDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        padding: '9px 14px', cursor: 'pointer', fontSize: '13px',
+                        borderBottom: '1px solid #f0f0f0',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = '#fff5f5'}
+                      onMouseOut={e => e.currentTarget.style.background = 'white'}
+                    >
+                      <span style={{ fontWeight: '600', color: sup.is_archived ? '#999' : '#2c3e50' }}>
+                        {sup.supplier_name}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#aaa' }}>#{sup.supplier_id}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>

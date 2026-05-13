@@ -1,14 +1,19 @@
 import os
+import smtplib
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # ==========================================
 # CONFIGURATION & SETUP
 # ==========================================
+SMTP_EMAIL = os.environ.get(SMTP_EMAIL)
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 load_dotenv()
 app = Flask(__name__)
 CORS(app)
@@ -416,6 +421,107 @@ def update_remarks(sales_id):
 
     except Exception as e:
         print(" UPDATE REMARKS ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/send-invoice-email', methods=['POST'])
+def send_invoice_email():
+    data = request.json
+
+    to_email = data.get('to')
+    subject = data.get('subject')
+    sales_id = data.get('sales_id')
+    date = data.get('date')
+    client_name = data.get('client_name')
+    client_address = data.get('client_address', '')
+    client_business_style = data.get('client_business_style', '')
+    client_tin = data.get('client_tin', '')
+    items = data.get('items', [])
+    total = data.get('total', 0)
+
+    # Build items rows
+    items_rows = ""
+    for item in items:
+        items_rows += f"""
+        <tr>
+          <td style="padding:6px;border-bottom:1px solid #eee">{item['quantity']}</td>
+          <td style="padding:6px;border-bottom:1px solid #eee">pcs</td>
+          <td style="padding:6px;border-bottom:1px solid #eee">{item['name']}</td>
+          <td style="padding:6px;border-bottom:1px solid #eee;text-align:center">₱{float(item['price']):,.2f}</td>
+          <td style="padding:6px;border-bottom:1px solid #eee;text-align:right">₱{float(item['subtotal']):,.2f}</td>
+        </tr>
+        """
+
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:700px;margin:auto;border:1px solid #ddd;border-radius:8px;overflow:hidden">
+      <div style="background:#d10000;padding:20px;text-align:center">
+        <h2 style="color:white;margin:0">ERGIN HARDWARE AND CONSTRUCTION SUPPLY</h2>
+        <p style="color:#ffcccc;margin:4px 0 0 0;font-size:13px">Bomba Street, Salvacion, Murcia, Negros Occidental</p>
+      </div>
+
+      <div style="padding:30px;background:white">
+        <h3 style="color:#d10000;margin:0 0 16px 0">CHARGE SALES INVOICE</h3>
+
+        <table style="width:100%;font-size:13px;margin-bottom:20px">
+          <tr><td style="color:#777;width:130px">Invoice No:</td><td><strong>INV-{sales_id}</strong></td></tr>
+          <tr><td style="color:#777">Date:</td><td>{date}</td></tr>
+          <tr><td style="color:#777">Charged to:</td><td><strong>{client_name}</strong></td></tr>
+          <tr><td style="color:#777">Address:</td><td>{client_address}</td></tr>
+          <tr><td style="color:#777">Business Style:</td><td>{client_business_style}</td></tr>
+          <tr><td style="color:#777">TIN:</td><td>{client_tin}</td></tr>
+        </table>
+
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f1f2f6">
+              <th style="padding:8px;text-align:left">Qty</th>
+              <th style="padding:8px;text-align:left">Unit</th>
+              <th style="padding:8px;text-align:left">Article</th>
+              <th style="padding:8px;text-align:center">U/P</th>
+              <th style="padding:8px;text-align:right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items_rows}
+          </tbody>
+        </table>
+
+        <div style="text-align:right;margin-top:20px;font-size:14px">
+          <div style="display:inline-block;border-top:2px solid #d10000;padding-top:10px;min-width:220px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span>SubTotal:</span><span>₱{float(total):,.2f}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:bold">
+              <span>Total:</span><span>₱{float(total):,.2f}</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size:11px;color:#888;margin-top:30px;border-top:1px solid #eee;padding-top:12px">
+          Received the above in good condition. Parties expressly submit themselves to the jurisdiction of the Courts of Bacolod City.
+        </p>
+      </div>
+
+      <div style="background:#f9f9f9;padding:14px;text-align:center;font-size:12px;color:#aaa">
+        This is an automated invoice from Ergin Hardware POS System.
+      </div>
+    </div>
+    """
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = to_email
+        msg.attach(MIMEText(html_body, 'html'))
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+
+        return jsonify({"message": "Email sent successfully"}), 200
+
+    except Exception as e:
+        print("Email error:", e)
         return jsonify({"error": str(e)}), 500
     
 # ==========================================
