@@ -598,14 +598,13 @@ const closeEditFormCompletely = () => {
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ width: '50%' }}>
-                  <label>Contact Number:</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={newSupplierData.contact} 
-                    onChange={e => setNewSupplierData({...newSupplierData, contact: e.target.value})} 
-                  />
-                </div>
+                    <label>Contact Number:</label>
+                    <input 
+                      type="text" 
+                      value={newSupplierData.contact} 
+                      onChange={e => setNewSupplierData({...newSupplierData, contact: e.target.value})} 
+                    />
+                  </div>
                 <div className="form-group" style={{ width: '50%' }}>
                   <label>Email Address:</label>
                   <input 
@@ -620,7 +619,6 @@ const closeEditFormCompletely = () => {
                   <label>Address:</label>
                   <input 
                     type="text" 
-                    required 
                     value={newSupplierData.address} 
                     onChange={e => setNewSupplierData({...newSupplierData, address: e.target.value})} 
                   />

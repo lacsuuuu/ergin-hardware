@@ -451,11 +451,13 @@ const closeEditFormCompletely = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Client Name / Company</label>
+                  {/* Name remains required */}
                   <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label>Contact Number</label>
-                  <input type="text" required value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+                  {/* Removed 'required' */}
+                  <input type="text" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
                 </div>
               </div>
               <div className="form-row">
@@ -471,7 +473,8 @@ const closeEditFormCompletely = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Address</label>
-                  <input type="text" required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                  {/* Removed 'required' */}
+                  <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label>TIN (Tax ID)</label>
@@ -512,11 +515,13 @@ const closeEditFormCompletely = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Client Name / Company</label>
+                  {/* Name remains required */}
                   <input type="text" required value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label>Contact Number</label>
-                  <input type="text" required value={editData.contact} onChange={(e) => setEditData({...editData, contact: e.target.value})} />
+                  {/* Removed 'required' */}
+                  <input type="text" value={editData.contact} onChange={(e) => setEditData({...editData, contact: e.target.value})} />
                 </div>
               </div>
               <div className="form-row">
@@ -532,7 +537,8 @@ const closeEditFormCompletely = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Address</label>
-                  <input type="text" required value={editData.address} onChange={(e) => setEditData({...editData, address: e.target.value})} />
+                  {/* Removed 'required' */}
+                  <input type="text" value={editData.address} onChange={(e) => setEditData({...editData, address: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label>TIN (Tax ID)</label>

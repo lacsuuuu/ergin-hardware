@@ -711,7 +711,7 @@ const Transact = () => {
               </div>
               <div className="form-group">
                 <label>Contact Number</label>
-                <input type="text" required value={newClientData.contact} onChange={(e) => setNewClientData({...newClientData, contact: e.target.value})} />
+                <input type="text" value={newClientData.contact} onChange={(e) => setNewClientData({...newClientData, contact: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Email</label>
@@ -719,7 +719,7 @@ const Transact = () => {
               </div>
               <div className="form-group">
                 <label>Address</label>
-                <input type="text" required value={newClientData.address} onChange={(e) => setNewClientData({...newClientData, address: e.target.value})} />
+                <input type="text" value={newClientData.address} onChange={(e) => setNewClientData({...newClientData, address: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Business Type</label>
