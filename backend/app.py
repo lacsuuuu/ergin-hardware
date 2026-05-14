@@ -12,7 +12,7 @@ from email.mime.text import MIMEText
 # ==========================================
 # CONFIGURATION & SETUP
 # ==========================================
-SMTP_EMAIL = os.environ.get(SMTP_EMAIL)
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 load_dotenv()
 app = Flask(__name__)
